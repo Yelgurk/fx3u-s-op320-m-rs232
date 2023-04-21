@@ -13,9 +13,10 @@ private:
 
 public:
     IOUnit(uint8_t stm_pin, mode pin_mode);
-    void init();
+    bool init();
     bool write(bool value);
-    uint8_t read();
+    uint32_t read();
+    bool isAnalog();
 };
 
 #endif
