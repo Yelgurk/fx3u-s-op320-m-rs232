@@ -68,9 +68,6 @@ void io_poll() {
   digitalWrite( PC8, bitRead( au16data[1], 1 ));
   digitalWrite( PA8, bitRead( au16data[1], 2 ));
 
-  //au16data[3] = value;
-  //au16data[4] = value2;
-
   MB_val1.writeValue(value);
   MB_val2.writeValue(value2);
 
