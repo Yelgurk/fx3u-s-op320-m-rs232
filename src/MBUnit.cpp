@@ -1,6 +1,6 @@
 #include "MBUnit.hpp"
 
-MBUnit::MBUnit(uint16_t (&mb_array)[], uint8_t op320_index, type value_type)
+MBUnit::MBUnit(uint16_t (&mb_array)[9], uint8_t op320_index, type value_type)
 {
     this->op320_index = op320_index;
     this->value_type = value_type;

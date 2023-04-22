@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "MBUnit.hpp"
 
 #include "Modbus.hpp"
 #define ID   1
@@ -8,6 +9,9 @@ unsigned long relayDelay = 0;
 uint16_t au16data[9];
 uint16_t value = 0;
 uint16_t value2 = 0;
+
+MBUnit MB_val1(au16data, 3, type::Uint16);
+MBUnit MB_val2(au16data, 4, type::Uint16); 
 
 void setup()
 {
@@ -24,8 +28,8 @@ void setup()
     pinMode(PA8, OUTPUT);
 
     slave.start();
-    currMillis = millis() + 100; //Guarda el tiempo actual + 100ms
-    digitalWrite(PC9, HIGH); //Prende el led del pin 13 (el de la placa)
+    relayDelay = millis() + 100;
+    digitalWrite(PC9, HIGH);
 }
 
 uint32_t curr = 0;
@@ -49,10 +53,10 @@ void loop()
 
     if (slave.poll( au16data, 9 ) > 4)
     {
-        currMillis = millis() + 500;
+        relayDelay = millis() + 500;
         digitalWrite(PC9, HIGH);
     }
-    if (millis() > currMillis) digitalWrite(PC9, LOW );
+    if (millis() > relayDelay) digitalWrite(PC9, LOW );
   
     io_poll();
 } 
@@ -64,8 +68,11 @@ void io_poll() {
   digitalWrite( PC8, bitRead( au16data[1], 1 ));
   digitalWrite( PA8, bitRead( au16data[1], 2 ));
 
-  au16data[3] = value;
-  au16data[4] = value2;
+  //au16data[3] = value;
+  //au16data[4] = value2;
+
+  MB_val1.writeValue(value);
+  MB_val2.writeValue(value2);
 
   au16data[6] = slave.getInCnt();
   au16data[7] = slave.getOutCnt();
