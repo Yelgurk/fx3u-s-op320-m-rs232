@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include "MBDispatcher.hpp"
+#include "IODispatcher.hpp"
+
 MBDispatcher mb_disp;
+IODispatcher io_monitor;
 
 uint16_t value = 0;
 uint16_t value2 = 0;
@@ -20,7 +23,6 @@ void setup()
 
 void loop()
 {
-
     mb_disp.poll();
     //RW data after MB poll
-} 
+}
