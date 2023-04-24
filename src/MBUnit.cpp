@@ -27,6 +27,19 @@ bool MBUnit::writeValue(uint16_t value)
     return true;
 }
 
+bool MBUnit::writeValue(bool value)
+{
+    if (value_type == type::None)
+        return false;
+
+    if (value_type == type::Uint16)
+        *array_unit_ptr = value;
+    else
+        bitWrite(*array_unit_ptr, buff_bit, value);
+
+    return true;
+}
+
 uint16_t MBUnit::readValue()
 {
     if (value_type == type::None)

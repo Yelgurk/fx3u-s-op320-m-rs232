@@ -17,6 +17,7 @@ private:
 public:
     MBUnit(uint16_t (&mb_array)[9], uint8_t op320_index, type value_type);
     bool writeValue(uint16_t value);
+    bool writeValue(bool value);
     uint16_t readValue();
 };
 

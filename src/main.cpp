@@ -11,7 +11,8 @@ uint16_t value = 0;
 uint16_t value2 = 0;
 
 MBUnit MB_val1(au16data, 3, type::Uint16);
-MBUnit MB_val2(au16data, 4, type::Uint16); 
+MBUnit MB_val2(au16data, 4, type::Uint16);
+MBUnit MB_coil1(au16data, 2, type::Coil); 
 
 void setup()
 {
@@ -63,7 +64,8 @@ void loop()
 
 
 void io_poll() {
-  bitWrite( au16data[0], 2, display ? 1 : 0);
+  MB_coil1.writeValue(display);
+  //bitWrite( au16data[0], 2, display ? 1 : 0);
 
   digitalWrite( PC8, bitRead( au16data[1], 1 ));
   digitalWrite( PA8, bitRead( au16data[1], 2 ));
