@@ -53,7 +53,8 @@ bool EEPROM::writeEE(unsigned long ee_addr, uint8_t byte, bool traceable)
 
 void EEPROM::incEEWriteCycleCnt()
 {
-    ++ee_curr_cycle_cnt;
+    //++ee_curr_cycle_cnt;
+    ee_curr_cycle_cnt += 50; // IMPORTANT! ee_curr_cycle_cnt must be increased by 1, this is for testing uint32 splitting to byte for saving in eeprom
     uint8_t ee_cycle_cnt_uint32[4];
 
     for (uint8_t range = 0; range < 4; range++)
