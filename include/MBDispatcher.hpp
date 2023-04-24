@@ -10,14 +10,14 @@
 
 class MBDispatcher
 {
-public:
-    static const uint8_t mb_datas_size = 9;
+private:
     Modbus op320;
+    static const uint8_t mb_datas_size = 9;
     uint16_t mb_au16data[mb_datas_size];
 
     void poll_error();
 
-public:
+protected:
     MBUnit  MB_val1 = MBUnit(mb_au16data, 3, type::Uint16),
             MB_val2 = MBUnit(mb_au16data, 4, type::Uint16),
             MB_coil1 = MBUnit(mb_au16data, 2, type::Coil),
@@ -27,7 +27,6 @@ public:
 public:
     void init();
     void poll();
-
 };
 
 #endif
