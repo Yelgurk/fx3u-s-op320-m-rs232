@@ -1,9 +1,15 @@
 #include <Arduino.h>
+#include "IODispatcher.hpp"
 
-void setup() {
-  // put your setup code here, to run once:
+IODispatcher io_monitor;
+
+void setup()
+{
+    Serial.setRx(PA10);
+    Serial.setTx(PA9);
+    Serial.begin(38400);
 }
 
-void loop() {
-  // put your main code here, to run repeatedly:
+void loop()
+{
 }
