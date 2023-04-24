@@ -55,12 +55,12 @@ void testEEReadWriteRelloc()
 
     currMill = millis();
 
-    if (currMill - task1Mill > 2000)
+    if (currMill - task1Mill > 500)
     {
         task1Mill = millis();
         ee24c64.writeEE(0x0000, ++testVal, true);
-        ee24c64.writeEE(0x0001, testVal * 2);
-        ee24c64.writeEE(0x0002, testVal * 3);
+        ee24c64.writeEE(0x0001, testVal * 2, true);
+        ee24c64.writeEE(0x0002, testVal * 3, true);
 
         Serial.print("[ ");
         Serial.print(ee24c64.readEE(0x0000));

@@ -7,7 +7,7 @@
 #define EE_BYTE_SIZE 8192
 #define EE_I2C_ARRD 0x50
 #define EE_CYCLE_UINT32_ADDR 0x0003
-#define EE_CYCLE_LIMIT 10
+#define EE_CYCLE_LIMIT 200
 #define EE_SECTOR_SIZE 0x0004
 
 class EEPROM
