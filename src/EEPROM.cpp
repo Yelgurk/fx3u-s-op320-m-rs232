@@ -53,14 +53,13 @@ bool EEPROM::writeEE(unsigned long ee_addr, uint8_t byte, bool traceable)
 
 void EEPROM::incEEWriteCycleCnt()
 {
-    //++ee_curr_cycle_cnt;
-    ee_curr_cycle_cnt += 50; // IMPORTANT! ee_curr_cycle_cnt must be increased by 1, this is for testing uint32 splitting to byte for saving in eeprom
+    ++ee_curr_cycle_cnt;
     uint8_t ee_cycle_cnt_uint32[4];
 
     for (uint8_t range = 0; range < 4; range++)
     {
         ee_cycle_cnt_uint32[range] = ((uint8_t*)&ee_curr_cycle_cnt)[3 - range];
-        writeEE(ee_sector_start_addr + EE_CYCLE_UINT32_ADDR + range, ee_cycle_cnt_uint32[range], false);
+        writeEE(ee_sector_start_addr + EE_SECTOR_SIZE + range, ee_cycle_cnt_uint32[range], false);
     }
 }
 
@@ -90,13 +89,13 @@ void EEPROM::checkEECycle(bool boot_up)
     if (depth > 0 && boot_up)
     {
         Serial.print("* set after boot on 0x");
-        Serial.print(ee_sector_start_addr + EE_SECTOR_SIZE * depth);
+        Serial.print(ee_sector_start_addr + (EE_SECTOR_SIZE + EE_COUNTER_SIZE) * depth);
         Serial.println(" *");
     }
     else if (depth > 0 && !boot_up)
     {
         Serial.print("* need change to 0x");
-        Serial.print(ee_sector_start_addr + EE_SECTOR_SIZE * depth);
+        Serial.print(ee_sector_start_addr + (EE_SECTOR_SIZE + EE_COUNTER_SIZE) * depth);
         Serial.println(" *");
     }
     else
@@ -108,7 +107,7 @@ void EEPROM::checkEECycle(bool boot_up)
 
     if (depth > 0)
     {
-        ee_sector_start_addr = ee_sector_start_addr + EE_SECTOR_SIZE * depth;
+        ee_sector_start_addr = ee_sector_start_addr + (EE_SECTOR_SIZE + EE_COUNTER_SIZE) * depth;
         if (!boot_up)
             changeEESector();
     }
@@ -120,10 +119,10 @@ void EEPROM::changeEESector()
          ee_val_writed = false;
     uint8_t ee_reloc_val;
 
-    for (uint32_t point = ee_sector_start_addr - EE_SECTOR_SIZE; point < ee_sector_start_addr; point++)
+    for (uint32_t point = ee_sector_start_addr - EE_SECTOR_SIZE - EE_COUNTER_SIZE; point < ee_sector_start_addr - EE_COUNTER_SIZE; point++)
     {
         ee_val_readed = readEE(point, &ee_reloc_val);
-        ee_val_writed = writeEE(point + EE_SECTOR_SIZE, ee_reloc_val);
+        ee_val_writed = writeEE(point + EE_SECTOR_SIZE + EE_COUNTER_SIZE, ee_reloc_val);
     
         if (!ee_val_readed || !ee_val_writed)
             break;
@@ -152,7 +151,11 @@ uint32_t EEPROM::getEESectorCycles(uint16_t ee_sector_depth)
 {
     uint8_t ee_cycle_cnt_uint32[4];
     for (uint8_t range = 0; range < 4; range++)
-            readEE(ee_sector_start_addr + EE_SECTOR_SIZE * ee_sector_depth + (EE_CYCLE_UINT32_ADDR + range), &ee_cycle_cnt_uint32[3 - range]);
+            readEE(ee_sector_start_addr + (EE_SECTOR_SIZE + EE_COUNTER_SIZE) * ee_sector_depth + EE_SECTOR_SIZE + range, &ee_cycle_cnt_uint32[3 - range]);
     
     return *((uint32_t*) ee_cycle_cnt_uint32);
+}
+
+uint16_t* EEPROM::getSectorStartAddr() {
+    return &ee_sector_start_addr;
 }
