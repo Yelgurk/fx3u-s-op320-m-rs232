@@ -1,34 +1,23 @@
 #include <Arduino.h>
-#include "MBUnit.hpp"
+#include "MBDispatcher.hpp"
+MBDispatcher mb_disp;
 
-#include "Modbus.hpp"
-#define ID   1
-
-Modbus slave;
 unsigned long relayDelay = 0;
-uint16_t au16data[9];
 uint16_t value = 0;
 uint16_t value2 = 0;
 
-MBUnit MB_val1(au16data, 3, type::Uint16);
-MBUnit MB_val2(au16data, 4, type::Uint16);
-MBUnit MB_coil1(au16data, 2, type::Coil); 
-
 void setup()
 {
-    //io_setup(); //configura las entradas y salidas
-
     Serial.setRx(PA10);
     Serial.setTx(PA9);
     Serial.begin(38400);
-
-    slave = Modbus(ID, Serial, 0);
 
     pinMode(PC9, OUTPUT);
     pinMode(PC8, OUTPUT);
     pinMode(PA8, OUTPUT);
 
-    slave.start();
+    mb_disp.init();
+    
     relayDelay = millis() + 100;
     digitalWrite(PC9, HIGH);
 }
@@ -37,7 +26,7 @@ uint32_t curr = 0;
 uint32_t old = 0;
 bool display = false;
 
-void io_poll();
+void poll_test();
 
 void loop()
 {
@@ -52,28 +41,17 @@ void loop()
     ++value;
     value2 += 2;
 
-    if (slave.poll( au16data, 9 ) > 4)
-    {
-        relayDelay = millis() + 500;
-        digitalWrite(PC9, HIGH);
-    }
-    if (millis() > relayDelay) digitalWrite(PC9, LOW );
-  
-    io_poll();
+    mb_disp.poll();
+    poll_test();
 } 
 
+void poll_test()
+{
+    mb_disp.MB_coil1.writeValue(display);
 
-void io_poll() {
-  MB_coil1.writeValue(display);
-  //bitWrite( au16data[0], 2, display ? 1 : 0);
+    digitalWrite(PC8, bitRead(mb_disp.mb_au16data[1], 1));
+    digitalWrite(PA8, bitRead(mb_disp.mb_au16data[1], 2));
 
-  digitalWrite( PC8, bitRead( au16data[1], 1 ));
-  digitalWrite( PA8, bitRead( au16data[1], 2 ));
-
-  MB_val1.writeValue(value);
-  MB_val2.writeValue(value2);
-
-  au16data[6] = slave.getInCnt();
-  au16data[7] = slave.getOutCnt();
-  au16data[8] = slave.getErrCnt();
+    mb_disp.MB_val1.writeValue(value);
+    mb_disp.MB_val2.writeValue(value2);
 }
