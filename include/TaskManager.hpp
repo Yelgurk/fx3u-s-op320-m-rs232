@@ -8,13 +8,11 @@
 
 class TaskManager
 {
-public:
+private:
     uint32_t current_mill = 0;
     uint32_t max_span_mill = 0;
     uint8_t tasks_cnt = 0;
     TMUnit *tasks_arr = new TMUnit[0];
-
-public:
 
 public:
     void newTask(CallbackFunction timerFunc, uint32_t time_span);

@@ -7,7 +7,7 @@ typedef std::function<void()> CallbackFunction;
 
 class TMUnit
 {
-public:
+private:
     CallbackFunction timerFunc;
     uint32_t *current_mill;
     uint32_t *max_span_mill;
