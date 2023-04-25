@@ -14,7 +14,8 @@ bool TMUnit::tryCall()
     if (*current_mill >= trigger_mill && !lock)
     {
         timerFunc();
-        trigger_mill = trigger_mill + time_span;
+        trigger_mill = *current_mill + time_span;
+        //trigger_mill += time_span;
 
         if (trigger_mill > *max_span_mill)
         {
