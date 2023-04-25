@@ -66,9 +66,6 @@ protected:
 
     bool init();
     void relaysOff();
-
-public:
-    
 };
 
 #endif
