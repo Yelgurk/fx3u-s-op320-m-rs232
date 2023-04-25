@@ -24,7 +24,6 @@ protected:
             MB_coil2 = MBUnit(mb_au16data, 17, type::Coil),
             MB_coil3 = MBUnit(mb_au16data, 18, type::Coil);
 
-public:
     void init();
     void poll();
 };
