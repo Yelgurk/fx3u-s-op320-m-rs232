@@ -31,12 +31,20 @@ bool IOUnit::write(bool value)
     return true;
 }
 
-uint32_t IOUnit::read()
+bool IOUnit::readDigital()
+{
+    if (pin_mode == mode::DigitalIN || pin_mode == mode::Relay)
+        return digitalRead(stm_pin);
+
+    return false;
+}
+
+uint16_t IOUnit::readAnalog()
 {
     if (pin_mode == mode::AnalogIN)
         return analogRead(stm_pin);
-    else
-        return digitalRead(stm_pin) == HIGH ? 1 : 0;
+    
+    return 0;
 }
 
 bool IOUnit::isAnalog() {

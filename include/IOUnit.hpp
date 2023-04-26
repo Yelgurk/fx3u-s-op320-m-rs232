@@ -15,7 +15,8 @@ public:
     IOUnit(uint8_t stm_pin, mode pin_mode);
     bool init();
     bool write(bool value);
-    uint32_t read();
+    bool readDigital();
+    uint16_t readAnalog();
     bool isAnalog();
 };
 

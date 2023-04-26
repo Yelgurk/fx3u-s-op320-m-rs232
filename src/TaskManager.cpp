@@ -1,6 +1,6 @@
 #include "TaskManager.hpp"
 
-void TaskManager::newTask(CallbackFunction timerFunc, uint32_t time_span_mill)
+void TaskManager::newTask(uint32_t time_span_mill, CallbackFunction timerFunc)
 {
     TMUnit *resize = new TMUnit[++tasks_cnt];
     for(uint8_t index = 0; index < tasks_cnt - 1; index++)
