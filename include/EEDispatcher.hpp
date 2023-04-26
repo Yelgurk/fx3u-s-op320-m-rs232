@@ -10,7 +10,7 @@ class EEDispatcher
 private:
     EEPROM ee24c64;
 
-protected:
+public:
     EEUnit ee_testVal1 = EEUnit(0x0000, &ee24c64, true),
            ee_testVal2 = EEUnit(0x0001, &ee24c64, false, ee24c64.getSectorStartAddr()),
            ee_testVal3 = EEUnit(0x0002, &ee24c64, false, ee24c64.getSectorStartAddr());
