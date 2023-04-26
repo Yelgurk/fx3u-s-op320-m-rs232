@@ -8,10 +8,6 @@ IOUnit::IOUnit(uint8_t stm_pin, mode pin_mode)
 
 bool IOUnit::init()
 {
-    Serial.print(stm_pin);
-    Serial.print(", ");
-    Serial.println((uint8_t)pin_mode);
-
     if (pin_mode == mode::None)
         return false;
 

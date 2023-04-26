@@ -16,12 +16,12 @@ private:
 
     void poll_error();
 
-protected:
-    MBUnit  MB_val1 = MBUnit(mb_au16data, 3, type::Uint16),
-            MB_val2 = MBUnit(mb_au16data, 4, type::Uint16),
-            MB_coil1 = MBUnit(mb_au16data, 2, type::Coil),
-            MB_coil2 = MBUnit(mb_au16data, 17, type::Coil),
-            MB_coil3 = MBUnit(mb_au16data, 18, type::Coil);
+public:
+    MBUnit  mb_val1 = MBUnit(mb_au16data, 3, type::Uint16),
+            mb_val2 = MBUnit(mb_au16data, 4, type::Uint16),
+            mb_coil1 = MBUnit(mb_au16data, 2, type::Coil),
+            mb_coil2 = MBUnit(mb_au16data, 17, type::Coil),
+            mb_coil3 = MBUnit(mb_au16data, 18, type::Coil);
 
     void init();
     void poll();

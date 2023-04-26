@@ -15,7 +15,7 @@ private:
     TMUnit *tasks_arr = new TMUnit[0];
 
 public:
-    void newTask(CallbackFunction timerFunc, uint32_t time_span);
+    void newTask(CallbackFunction timerFunc, uint32_t time_span_mill);
     void dispatcher();
 };
 

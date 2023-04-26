@@ -11,6 +11,12 @@ TMUnit::TMUnit(uint32_t &current_mill, uint32_t &max_span_mill, uint32_t time_sp
 
 bool TMUnit::tryCall()
 {
+    if (time_span == 0)
+    {
+        timerFunc();
+        return true;
+    }
+
     if (*current_mill >= trigger_mill && !lock)
     {
         timerFunc();

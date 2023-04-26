@@ -65,10 +65,6 @@ void EEPROM::incEEWriteCycleCnt()
 
 void EEPROM::checkEECycle(bool boot_up)
 {
-    Serial.println("* start anylize *");
-    if (boot_up)
-        Serial.println("* on booting up *");
-
     if (boot_up)
         ee_curr_cycle_cnt = 0;
 
@@ -85,25 +81,6 @@ void EEPROM::checkEECycle(bool boot_up)
 
     if (ee_cycle_cnt_old >= EE_CYCLE_LIMIT && boot_up && ee_curr_cycle_cnt == 0)
         boot_up = false;
-
-    if (depth > 0 && boot_up)
-    {
-        Serial.print("* set after boot on 0x");
-        Serial.print(ee_sector_start_addr + (EE_SECTOR_SIZE + EE_COUNTER_SIZE) * depth);
-        Serial.println(" *");
-    }
-    else if (depth > 0 && !boot_up)
-    {
-        Serial.print("* need change to 0x");
-        Serial.print(ee_sector_start_addr + (EE_SECTOR_SIZE + EE_COUNTER_SIZE) * depth);
-        Serial.println(" *");
-    }
-    else
-    {
-        Serial.print("* leave at 0x");
-        Serial.print(ee_sector_start_addr);
-        Serial.println(" *");
-    }
 
     if (depth > 0)
     {
@@ -131,18 +108,11 @@ void EEPROM::changeEESector()
 
 bool EEPROM::resetEE(uint16_t ee_begin, uint16_t ee_end)
 {
+    ee_end = ee_end > EE_FULL_BSIZE ? EE_FULL_BSIZE : ee_end;
+
     for (uint16_t point = ee_begin; point < ee_end - 1; point++)
-    {
         if (!writeEE(point, 0))
             return false;
-
-        if (point % 100 == 0)
-        {
-            Serial.print("* reset 0x");
-            Serial.print(point);
-            Serial.println(" OK *");
-        }
-    }
 
     return true;
 }
