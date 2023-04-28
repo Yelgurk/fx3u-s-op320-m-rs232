@@ -12,9 +12,15 @@ void FXCore::init()
 
     loadFromEE();
 
-    newTask(0,      [this]() -> void { poll(); });
-    newTask(50,     [this]() -> void { getSensorsVal(); });
-    newTask(200,    [this]() -> void { mainThread(); });
+    newTask(25,     [this]() -> void { poll(); });
+    newTask(200,    [this]() -> void {
+        mb_rtc_hh.writeValue((uint16_t)rtc.getHours());
+        mb_rtc_mm.writeValue((uint16_t)rtc.getMinutes());
+        mb_rtc_ss.writeValue((uint16_t)rtc.getSeconds());
+    });
+
+    //newTask(50,     [this]() -> void { getSensorsVal(); });
+    //newTask(200,    [this]() -> void { mainThread(); });
 }
 
 void FXCore::loadFromEE()
@@ -90,5 +96,8 @@ void FXCore::pasteurTask()
 
 void FXCore::mainThread()
 {
-
+    if (mb_comm_stop_proc.readValue() == 1)
+        io_blowgun_r.write(true);
+    else
+        io_blowgun_r.write(false);
 }
