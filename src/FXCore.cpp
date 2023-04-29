@@ -10,7 +10,7 @@ void FXCore::init()
     rtc.setClockSource(STM32RTC::LSE_CLOCK);
     rtc.begin();
 
-    mb_comm_stop_proc.addTrigger([this]() -> void { pasteurFinish(); blowgunFinish(); heaterToggle(false); mixerToggle(false); });
+    mb_comm_stop_proc.addTrigger([this]() -> void { stopAllFunc(); });
     mb_comm_blow_preset_1.addTrigger([this]() -> void { blowingSelectPreset(0); });
     mb_comm_blow_preset_2.addTrigger([this]() -> void { blowingSelectPreset(1); });
     mb_comm_blow_preset_3.addTrigger([this]() -> void { blowingSelectPreset(2); });
@@ -131,39 +131,31 @@ void FXCore::loadFromEE()
     mb_self_mode_list.writeValue((uint16_t)(self_pasteur_mode = ee_self_psteur_mode.readEE()));
 }
 
-void FXCore::setNewTime()
-{
-
-}
-
-void FXCore::setNewDate()
-{
-
-}
-
 void FXCore::pasteurStart()
 {
-
+    is_pasteur_proc_running = true;
+    is_pasteur_proc_paused = false;
 }
 
 void FXCore::pasteurPause()
 {
-
+    is_pasteur_proc_paused = true;
 }
 
 void FXCore::pasteurResume()
 {
-
+    is_pasteur_proc_paused = false;
 }
 
 void FXCore::pasteurFinish()
 {
-
+    is_pasteur_proc_running = false;
+    is_pasteur_proc_paused = false;
 }
 
 void FXCore::blowgunStart()
 {
-
+    is_blowgun_call = false;
 }
 
 void FXCore::blowgunFinish()
@@ -173,12 +165,29 @@ void FXCore::blowgunFinish()
 
 void FXCore::heaterToggle(bool toggle)
 {
-
+    if (is_water_in_jacket && !is_pasteur_proc_running)
+    {
+        
+    }
 }
 
 void FXCore::mixerToggle(bool toggle)
 {
 
+}
+
+void FXCore::freezingToggle(bool toggle)
+{
+
+}
+
+void FXCore::stopAllFunc()
+{
+    is_stop_btn_pressed = false;
+    pasteurFinish();
+    blowgunFinish();
+    heaterToggle(false);
+    mixerToggle(false);
 }
 
 void FXCore::pasteurTask()
@@ -188,13 +197,41 @@ void FXCore::pasteurTask()
 
 void FXCore::mainThread()
 {
-    if (isBlowgunCall) //(!isConnectedTo380V && isBlowgunCall)
+    if (is_pasteur_proc_running && mb_get_op320_scr.readValue() == SCR_MASTER_PAGE)
+        mb_set_op320_scr.writeValue((uint16_t)SCR_MASTER_PAGE_TIME);
+
+    if (!is_pasteur_proc_running && mb_get_op320_scr.readValue() == SCR_MASTER_PAGE_TIME)
+        mb_set_op320_scr.writeValue((uint16_t)SCR_MASTER_PAGE);
+
+    if (!is_connected_380V &&
+        !is_stop_btn_pressed &&
+        !is_pasteur_proc_running &&
+        is_blowgun_call &&
+        mb_get_op320_scr.readValue() == SCR_BLOWING_PAGE)
+        blowgunStart();
+    
+    if (is_stop_btn_pressed)
+        stopAllFunc();
+
+    if (is_pasteur_proc_running && !is_pasteur_proc_paused && !is_water_in_jacket)
+        pasteurPause();
+    
+    if (is_pasteur_proc_running && is_pasteur_proc_paused && is_water_in_jacket)
+        pasteurResume();
+
+    if (is_pasteur_proc_running && !is_connected_380V)
     {
-        io_blowgun_r.write(true);
-        delay(60000 / 38000 / (blowgun_preset_volume[blowgun_preset_selected] * 10));
-        io_blowgun_r.write(false);
-        isBlowgunCall = false;
+        pasteurFinish();
+        // go to notify scr + set mb_notify val
     }
+
+    if (is_pasteur_proc_running && is_mixer_error)
+    {
+        pasteurFinish();
+        // go to notify scr + set mb_notify val
+    }
+
+    //here alarm check for auto calling pasteur preset
 }
 
 /* PRIVATE + PROTECTED */
@@ -277,30 +314,20 @@ void FXCore::selfPasteurChangeMode(bool is_positive)
 
 void FXCore::readSlowSensors()
 {
-    isConnectedTo380V = io_v380_s.readDigital();
-    isWaterInWJacket = io_water_jacket_s.readDigital();
+    is_connected_380V = io_v380_s.readDigital();
+    is_water_in_jacket = io_water_jacket_s.readDigital();
 }
 
 void FXCore::readMediumSensors()
 {
-    mb_batt_charge.writeValue(battChargeV = io_battery_s.readAnalog() / 40.95);
-    liquidTempC = io_liquid_temp_s.readAnalog() / 20.475 - 50;
-    mb_liq_tempC.writeValue((uint16_t)liquidTempC);
+    mb_batt_charge.writeValue(batt_chargeV = io_battery_s.readAnalog() / 40.95);
+    liquid_tempC = io_liquid_temp_s.readAnalog() / 20.475 - 50;
+    mb_liq_tempC.writeValue((uint16_t)liquid_tempC);
 }
 
 void FXCore::readFastSensors()
 {
-    isStopBtnPressed = isStopBtnPressed ? true : io_stop_btn_s.readDigital();
-    
-    if (io_blowgun_s.readDigital())
-    {
-        io_blowgun_r.write(true);
-        delay(60000 * (blowgun_preset_volume[blowgun_preset_selected] * 20) / 38000);
-        io_blowgun_r.write(false);
-    }
-    else
-        io_blowgun_r.write(false);
-
-
-    isMixerError = io_mixer_crash_s.readDigital();
+    is_stop_btn_pressed = is_stop_btn_pressed ? true : io_stop_btn_s.readDigital();
+    is_blowgun_call = is_blowgun_call ? true : io_blowgun_s.readDigital();
+    is_mixer_error = io_mixer_crash_s.readDigital();
 }

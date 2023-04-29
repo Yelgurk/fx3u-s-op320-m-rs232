@@ -57,7 +57,8 @@ public:
            ee_master_4ma_adc_value = EEUnit(0x0039, &ee24c64, false),
            ee_master_20ma_adc_value = EEUnit(0x0040, &ee24c64, false),
            ee_master_pump_perf_lm = EEUnit(0x0041, &ee24c64, false);
-
+           
+            
     bool init();
 };
 

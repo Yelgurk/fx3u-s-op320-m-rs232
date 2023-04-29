@@ -9,6 +9,10 @@
 #define _fxcore_hpp
 
 #define BLOWGUN_PRESET_WASHING 3 
+#define SCR_HELLO_PAGE 1
+#define SCR_MASTER_PAGE 2
+#define SCR_MASTER_PAGE_TIME 3
+#define SCR_BLOWING_PAGE 4
 #define SCR_USER_MENU 5
 
 class FXCore : protected MBDispatcher,
@@ -17,14 +21,20 @@ class FXCore : protected MBDispatcher,
                public TaskManager
 {
 private:
+    // pasteur variables
+    bool is_pasteur_proc_running = false;
+    bool is_pasteur_proc_paused = false;
+    bool is_solo_heating = false;
+    bool is_solo_freezing = false;
+
     // sensors
-    bool isConnectedTo380V = false;
-    bool isWaterInWJacket = false;
-    bool isMixerError = false;
-    bool isStopBtnPressed = false;
-    bool isBlowgunCall = false;
-    int16_t liquidTempC = 0;
-    uint16_t battChargeV = 0;
+    bool is_connected_380V = false;
+    bool is_water_in_jacket = false;
+    bool is_mixer_error = false;
+    bool is_stop_btn_pressed = false;
+    bool is_blowgun_call = false;
+    int16_t liquid_tempC = 0;
+    uint16_t batt_chargeV = 0;
     
     // blowgun variables
     int16_t blowgun_preset_volume[BLOWGUN_PRESET_CNT] { 0 };
@@ -61,8 +71,6 @@ private:
 public:
     void init();
     void loadFromEE();
-    void setNewTime();
-    void setNewDate();
     void pasteurStart();
     void pasteurPause();
     void pasteurResume();
@@ -71,6 +79,8 @@ public:
     void blowgunFinish();
     void heaterToggle(bool toggle);
     void mixerToggle(bool toggle);
+    void freezingToggle(bool toggle);
+    void stopAllFunc();
     void pasteurTask();
     void mainThread();
 };
