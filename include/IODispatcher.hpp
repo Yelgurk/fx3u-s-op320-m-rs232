@@ -52,10 +52,10 @@ private:
     IOUnit **io_array;
 
 public:
-    IOUnit io_heater_r = IOUnit(HEATER_PIN, mode::Relay),
-           io_mixer_r = IOUnit(MIXER_PIN, mode::Relay),
-           io_water_jacket_r = IOUnit(WJACKET_VALVE_PIN, mode::Relay),
-           io_blowgun_r = IOUnit(BLOWGUN_PUMP_PIN, mode::Relay),
+    IOUnit io_heater_r = IOUnit(HEATER_PIN, mode::Relay, false),
+           io_mixer_r = IOUnit(MIXER_PIN, mode::Relay, false),
+           io_water_jacket_r = IOUnit(WJACKET_VALVE_PIN, mode::Relay, false),
+           io_blowgun_r = IOUnit(BLOWGUN_PUMP_PIN, mode::Relay, false),
            io_water_jacket_s = IOUnit(WJACKET_SENSOR_PIN, mode::DigitalIN),
            io_stop_btn_s = IOUnit(STOPBTN_PIN, mode::DigitalIN),
            io_mixer_crash_s = IOUnit(MIXER_CRASH_SIGNAL_PIN, mode::DigitalIN),

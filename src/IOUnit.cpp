@@ -1,9 +1,10 @@
 #include "IOUnit.hpp"
 
-IOUnit::IOUnit(uint8_t stm_pin, mode pin_mode)
+IOUnit::IOUnit(uint8_t stm_pin, mode pin_mode, bool is_reverse)
 {
     this->stm_pin = stm_pin;
     this->pin_mode = pin_mode;
+    this->is_reverse = is_reverse;
 }
 
 bool IOUnit::init()
@@ -34,9 +35,9 @@ bool IOUnit::write(bool value)
 bool IOUnit::readDigital()
 {
     if (pin_mode == mode::DigitalIN || pin_mode == mode::Relay)
-        return digitalRead(stm_pin);
+        return is_reverse ? !digitalRead(stm_pin) : digitalRead(stm_pin);
 
-    return false;
+    return is_reverse ? true : false;
 }
 
 uint16_t IOUnit::readAnalog()

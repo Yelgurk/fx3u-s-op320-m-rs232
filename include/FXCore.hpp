@@ -9,6 +9,7 @@
 #define _fxcore_hpp
 
 #define BLOWGUN_PRESET_WASHING 3 
+#define SCR_USER_MENU 5
 
 class FXCore : protected MBDispatcher,
                protected IODispatcher,
@@ -32,12 +33,30 @@ private:
     uint8_t blowgun_preset_selected = 0;
     uint8_t blowgun_prescaler_selected = 0;
 
+    // solo temp c
+    uint8_t solo_heating_tempC = 0;
+    uint8_t solo_freezing_tempC = 0;
+
+    // blowgun calibration
+    uint16_t blow_calib_volume = 3000;
+    uint8_t blowing_calib_range = 100;
+
+    // self pasteur
+    uint8_t self_pasteur_tempC = 0;
+    uint8_t self_heating_tempC = 0;
+    uint8_t self_freezing_tempC = 0;
+    uint8_t self_pasteur_durat = 0;
+    uint8_t self_pasteur_mode = 0;
+
     STM32RTC& rtc = STM32RTC::getInstance();
     
     void blowingSelectPreset(uint8_t preset_id);
     void blowingResetVolume(bool is_positive);
     void blowingChangePrescaler(bool boot_up = false);
-    void getSensorsVal();
+    void selfPasteurChangeMode(bool is_positive);
+    void readSlowSensors();
+    void readMediumSensors();
+    void readFastSensors();
 
 public:
     void init();
