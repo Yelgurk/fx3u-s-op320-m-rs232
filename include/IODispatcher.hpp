@@ -44,12 +44,12 @@
 #define BATTERY_CHARGE_PIN      AD0
 #define LIQUID_TEMPC_PIN        AD3
 
-const uint8_t c_io_array_size = 11;
+#define IO_COUNT 11
 
 class IODispatcher
 {
 private:
-    IOUnit *io_array;
+    IOUnit **io_array;
 
 public:
     IOUnit io_heater_r = IOUnit(HEATER_PIN, mode::Relay),

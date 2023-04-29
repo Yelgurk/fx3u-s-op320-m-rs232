@@ -7,6 +7,8 @@
 #ifndef _mbdispatcher_hpp
 #define _mbdispatcher_hpp
 
+#define COMM_COUNT 32
+
 class MBDispatcher
 {
 private:
@@ -16,6 +18,8 @@ private:
     void poll_error();
 
 public:
+    MBUnit **mb_comm_arr;
+
     MBUnit mb_set_op320_scr = MBUnit(mb_au16data, 0, type::Uint16),
            mb_get_op320_scr = MBUnit(mb_au16data, 1, type::Uint16),
            mb_batt_charge = MBUnit(mb_au16data, 2, type::Uint16),
@@ -70,7 +74,7 @@ public:
            mb_comm_blow_preset_2 = MBUnit(mb_au16data, 786, type::Coil),
            mb_comm_blow_preset_3 = MBUnit(mb_au16data, 787, type::Coil),
            mb_comm_blow_preset_4 = MBUnit(mb_au16data, 788, type::Coil),
-           mb_blow_blow_vInc = MBUnit(mb_au16data, 789, type::Coil),
+           mb_comm_blow_vInc = MBUnit(mb_au16data, 789, type::Coil),
            mb_comm_blow_vDec = MBUnit(mb_au16data, 790, type::Coil),
            mb_comm_blow_prescaler = MBUnit(mb_au16data, 791, type::Coil),
            mb_comm_pass_7 = MBUnit(mb_au16data, 792, type::Coil),
@@ -94,12 +98,15 @@ public:
            mb_comm_auto_accept = MBUnit(mb_au16data, 810, type::Coil),
            mb_master_water_saving_toggle = MBUnit(mb_au16data, 811, type::Coil),
            mb_master_hysteresis_toggle = MBUnit(mb_au16data, 812, type::Coil),
-           mb_master_cancel = MBUnit(mb_au16data, 813, type::Coil),
-           mb_master_accept = MBUnit(mb_au16data, 814, type::Coil),
-           mb_master_full_hard_reset = MBUnit(mb_au16data, 815, type::Coil);
+           mb_master_water_saving_monitor = MBUnit(mb_au16data, 813, type::Coil),
+           mb_master_hysteresis_monitor = MBUnit(mb_au16data, 814, type::Coil),
+           mb_master_cancel = MBUnit(mb_au16data, 815, type::Coil),
+           mb_master_accept = MBUnit(mb_au16data, 816, type::Coil),
+           mb_master_full_hard_reset = MBUnit(mb_au16data, 817, type::Coil);
 
     void init();
     void poll();
+    void commCheck();
 };
 
 #endif
