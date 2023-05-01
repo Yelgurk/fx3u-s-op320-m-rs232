@@ -85,7 +85,7 @@ void FXCore::init()
     mb_master_full_hard_reset.addTrigger([this]() -> void {  });
 
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); });
-    TaskManager::newTask(100,   [this]() -> void { readFastSensors(); mainThread(); });
+    TaskManager::newTask(100,   [this]() -> void { readSensors(); mainThread(); });
     TaskManager::newTask(200,   [this]() -> void {
         mb_rtc_hh.writeValue((uint16_t)rtc.getHours());
         mb_rtc_mm.writeValue((uint16_t)rtc.getMinutes());
@@ -94,8 +94,7 @@ void FXCore::init()
         mb_rtc_MM.writeValue((uint16_t)rtc.getMonth());
         mb_rtc_YY.writeValue((uint16_t)rtc.getYear());
     });
-    TaskManager::newTask(2000,  [this]() -> void { readMediumSensors(); });
-    TaskManager::newTask(30000, [this]() -> void { readSlowSensors(); });
+    TaskManager::newTask(30000, [this]() -> void { readTempCSensor(); });
 
     delay(50);
     mb_blow_calib_dosage.writeValue((uint16_t)(blow_calib_volume / 10));
@@ -131,26 +130,71 @@ void FXCore::loadFromEE()
     mb_self_mode_list.writeValue((uint16_t)(self_pasteur_mode = ee_self_psteur_mode.readEE()));
 }
 
-void FXCore::pasteurStart()
+bool FXCore::pasteurStart()
 {
+    if (is_pasteur_proc_running)
+        return false;
+    else
+        stopAllFunc();
+
     is_pasteur_proc_running = true;
     is_pasteur_proc_paused = false;
+    is_pasteur_part_finished = false;
+    is_freezing_part_finished = false;
+    is_heating_part_finished = false;
+    is_waterJ_filled_yet = false;
+    
+    //is_pasteur_need_in_freezing = false;
+    //is_pasteur_need_in_heating = false;
+    rtc_pasteur_started.setInstTime();
+
+    // save to ee rtc of running
+
+    return true;
 }
 
 void FXCore::pasteurPause()
 {
-    is_pasteur_proc_paused = true;
+    if (is_pasteur_proc_running)
+    {
+        is_pasteur_proc_paused = true;
+        rtc_pasteur_paused.setInstTime();
+
+        io_heater_r.write(false);
+        io_mixer_r.write(false);
+        if (!is_water_in_jacket)
+            io_water_jacket_r.write(true);
+
+        // save to ee rtc of pause + pause error code
+    }
 }
 
 void FXCore::pasteurResume()
 {
-    is_pasteur_proc_paused = false;
+    if (is_pasteur_proc_running)
+    {
+        is_pasteur_proc_paused = false;
+
+        io_mixer_r.write(true);
+        io_water_jacket_r.write(false);
+    }
+
+    // check resume response to pause rtc and finish or save to ee rtc of resume
 }
 
-void FXCore::pasteurFinish()
+void FXCore::pasteurFinish(FinishFlag flag)
 {
     is_pasteur_proc_running = false;
     is_pasteur_proc_paused = false;
+    is_pasteur_part_finished = false;
+    is_freezing_part_finished = false;
+    is_heating_part_finished = false;
+    is_waterJ_filled_yet = false;
+    is_pasteur_need_in_freezing = false;
+    is_pasteur_need_in_heating = false;
+    rtc_pasteur_finished.setInstTime();
+
+    // save to ee rtc of finish + code ok or mixer error
 }
 
 void FXCore::blowgunStart()
@@ -165,71 +209,212 @@ void FXCore::blowgunFinish()
 
 void FXCore::heaterToggle(bool toggle)
 {
-    if (is_water_in_jacket && !is_pasteur_proc_running)
+    if (!is_pasteur_proc_running)
     {
-        
+        if (is_solo_heating = toggle && is_solo_freezing)
+            freezingToggle(false);
+
+        if (!is_solo_heating && !is_solo_freezing)
+        {
+            io_heater_r.write(false);
+            io_water_jacket_r.write(false);
+            mixerToggle(false);
+        }
+    }
+}
+
+void FXCore::freezingToggle(bool toggle)
+{
+    if (!is_pasteur_proc_running)
+    {
+        if (is_solo_freezing = toggle && is_solo_heating)
+            heaterToggle(false);
+
+        if (!is_solo_freezing && !is_solo_heating)
+        {
+            io_heater_r.write(false);
+            io_water_jacket_r.write(false);
+            mixerToggle(false);
+        }
     }
 }
 
 void FXCore::mixerToggle(bool toggle)
 {
-
+    if (toggle && (is_solo_freezing || is_solo_heating || is_pasteur_proc_running))
+        io_mixer_r.write(true);
+    else
+        io_mixer_r.write(false);
 }
 
-void FXCore::freezingToggle(bool toggle)
+void FXCore::heatersPID(uint8_t tempC)
 {
+    if ((is_pasteur_proc_running || is_solo_heating) && is_heaters_available)
+    {
+        is_heaters_available = false;
 
+        if (liquid_tempC > tempC)
+            io_heater_r.write(true);
+        else
+            io_heater_r.write(false);
+    }
+    else
+        io_heater_r.write(false);
 }
 
 void FXCore::stopAllFunc()
 {
     is_stop_btn_pressed = false;
-    pasteurFinish();
+    if (is_pasteur_proc_running)
+        pasteurFinish(FinishFlag::UserCall);
+        
     blowgunFinish();
     heaterToggle(false);
+    freezingToggle(false);
     mixerToggle(false);
 }
 
-void FXCore::pasteurTask()
+bool FXCore::pasteurTask()
 {
+    rtc_pasteur_in_proc.setInstTime();
 
+    if (!is_pasteur_part_finished)
+    {
+        if (is_mixer_error)
+        {
+            pasteurFinish(FinishFlag::MixerError);
+            // go to notify scr + set mb_notify val
+            return false;
+        }
+
+        if (is_pasteur_proc_paused)
+        {
+            rtc_pasteur_in_await.setInstTime();
+            if (!rtc_pasteur_paused.inRange(PASTEUR_AWAIT_LIMIT_MM, rtc_pasteur_in_await))
+            {
+                pasteurFinish(!is_connected_380V ? FinishFlag::Power380vError : FinishFlag::WaterJacketError);
+                return false;
+            }
+        }
+
+        if ((!is_connected_380V || (is_waterJ_filled_yet ? !is_water_in_jacket : false)) && !is_pasteur_proc_paused)
+        {
+            pasteurPause();
+            return false;
+        }
+        else if ((!is_connected_380V || (is_waterJ_filled_yet ? !is_water_in_jacket : false)) && is_pasteur_proc_paused)
+            return false;
+
+        if (is_connected_380V && (is_waterJ_filled_yet ? is_water_in_jacket : true) && is_pasteur_proc_paused)
+            pasteurResume();
+
+        if (!is_water_in_jacket)
+        {
+            io_water_jacket_r.write(true);
+            // write step to op320
+            return true;
+        }
+        else
+        {
+            if (!is_waterJ_filled_yet)
+                is_waterJ_filled_yet = true;
+            
+            io_water_jacket_r.write(false);
+        }
+
+        //heatersPID([expectedTempC])
+        heatersPID(45);
+        mixerToggle(true);
+
+        //if (!rtc_pasteur_started.inRange([expectedDurationMM], rtc_pasteur_in_proc))
+        if (!rtc_pasteur_started.inRange(30, rtc_pasteur_in_proc))
+            is_pasteur_part_finished = true;
+    }
+
+    if (is_pasteur_need_in_freezing ? !is_freezing_part_finished : false)
+    {
+        //freezingTask([pattert value]);
+        freezingTask(45);
+        if (liquid_tempC >= 45)
+            is_freezing_part_finished = true;
+        return true;
+    }
+
+    if (is_pasteur_need_in_heating ? !is_heating_part_finished : false)
+    {
+        //heatingTask([pattert value]);
+        heatingTask(45);
+        if (liquid_tempC <= 45)
+            is_heating_part_finished = true;
+        return true;
+    }
+
+    if ((is_pasteur_need_in_freezing ? is_freezing_part_finished : true) &&
+        (is_pasteur_need_in_heating ? is_heating_part_finished : true))
+        pasteurFinish(FinishFlag::Success);
+
+    return true;
+}
+
+void FXCore::heatingTask(uint8_t expectedTempC)
+{
+    mixerToggle(true);
+    if (!is_water_in_jacket)
+    {
+        io_water_jacket_r.write(true);
+        // write step to op320
+    }
+    else
+    {
+        io_water_jacket_r.write(false);
+        heatersPID(expectedTempC);
+        // write step to op320
+    }
+}
+
+void FXCore::freezingTask(uint8_t expectedTempC)
+{
+    mixerToggle(true);
+    if (liquid_tempC > expectedTempC)
+    {
+        io_water_jacket_r.write(true);
+        // write step to op320
+    }
+    else
+    {
+        io_water_jacket_r.write(false);
+        // write step to op320
+    }
 }
 
 void FXCore::mainThread()
 {
-    if (is_pasteur_proc_running && mb_get_op320_scr.readValue() == SCR_MASTER_PAGE)
-        mb_set_op320_scr.writeValue((uint16_t)SCR_MASTER_PAGE_TIME);
-
-    if (!is_pasteur_proc_running && mb_get_op320_scr.readValue() == SCR_MASTER_PAGE_TIME)
-        mb_set_op320_scr.writeValue((uint16_t)SCR_MASTER_PAGE);
-
-    if (!is_connected_380V &&
-        !is_stop_btn_pressed &&
+    if (is_blowgun_call &&
         !is_pasteur_proc_running &&
-        is_blowgun_call &&
+        !is_stop_btn_pressed &&
+        !is_connected_380V &&
         mb_get_op320_scr.readValue() == SCR_BLOWING_PAGE)
         blowgunStart();
     
     if (is_stop_btn_pressed)
         stopAllFunc();
 
-    if (is_pasteur_proc_running && !is_pasteur_proc_paused && !is_water_in_jacket)
-        pasteurPause();
-    
-    if (is_pasteur_proc_running && is_pasteur_proc_paused && is_water_in_jacket)
-        pasteurResume();
+    if (is_pasteur_proc_running && mb_get_op320_scr.readValue() == SCR_MASTER_PAGE)
+        mb_set_op320_scr.writeValue((uint16_t)SCR_MASTER_PAGE_TIME);
 
-    if (is_pasteur_proc_running && !is_connected_380V)
-    {
-        pasteurFinish();
-        // go to notify scr + set mb_notify val
-    }
+    if (!is_pasteur_proc_running && mb_get_op320_scr.readValue() == SCR_MASTER_PAGE_TIME)
+        mb_set_op320_scr.writeValue((uint16_t)SCR_MASTER_PAGE);
 
-    if (is_pasteur_proc_running && is_mixer_error)
-    {
-        pasteurFinish();
-        // go to notify scr + set mb_notify val
-    }
+    if (is_pasteur_proc_running)
+        pasteurTask();
+
+    if (is_solo_heating)
+        //heatingTask([solo value]);
+        heatingTask(45);
+
+    if (is_solo_freezing)
+        //freezingTask([solo value]);
+        freezingTask(45);
 
     //here alarm check for auto calling pasteur preset
 }
@@ -312,22 +497,21 @@ void FXCore::selfPasteurChangeMode(bool is_positive)
     mb_self_mode_list.writeValue((uint16_t)self_pasteur_mode);
 }
 
-void FXCore::readSlowSensors()
-{
-    is_connected_380V = io_v380_s.readDigital();
-    is_water_in_jacket = io_water_jacket_s.readDigital();
-}
-
-void FXCore::readMediumSensors()
-{
-    mb_batt_charge.writeValue(batt_chargeV = io_battery_s.readAnalog() / 40.95);
-    liquid_tempC = io_liquid_temp_s.readAnalog() / 20.475 - 50;
-    mb_liq_tempC.writeValue((uint16_t)liquid_tempC);
-}
-
-void FXCore::readFastSensors()
+void FXCore::readSensors()
 {
     is_stop_btn_pressed = is_stop_btn_pressed ? true : io_stop_btn_s.readDigital();
     is_blowgun_call = is_blowgun_call ? true : io_blowgun_s.readDigital();
     is_mixer_error = io_mixer_crash_s.readDigital();
+
+    mb_batt_charge.writeValue(batt_chargeV = io_battery_s.readAnalog() / 40.95);
+    mb_liq_tempC.writeValue((uint16_t)liquid_tempC);
+    
+    is_connected_380V = io_v380_s.readDigital();
+    is_water_in_jacket = io_water_jacket_s.readDigital();
+}
+
+void FXCore::readTempCSensor()
+{
+    liquid_tempC = io_liquid_temp_s.readAnalog() / 20.475 - 50;
+    is_heaters_available = true;
 }

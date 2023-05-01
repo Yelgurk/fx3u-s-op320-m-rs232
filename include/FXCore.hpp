@@ -4,6 +4,7 @@
 #include "EEDispatcher.hpp"
 #include "TaskManager.hpp"
 #include <STM32RTC.h>
+#include "RTCObject.hpp"
 
 #ifndef _fxcore_hpp
 #define _fxcore_hpp
@@ -14,6 +15,9 @@
 #define SCR_MASTER_PAGE_TIME 3
 #define SCR_BLOWING_PAGE 4
 #define SCR_USER_MENU 5
+#define PASTEUR_AWAIT_LIMIT_MM 60
+
+enum class FinishFlag { Success, UserCall, MixerError, Power380vError, WaterJacketError };
 
 class FXCore : protected MBDispatcher,
                protected IODispatcher,
@@ -24,6 +28,16 @@ private:
     // pasteur variables
     bool is_pasteur_proc_running = false;
     bool is_pasteur_proc_paused = false;
+    bool is_pasteur_part_finished = false;
+    bool is_waterJ_filled_yet = false;
+    RTCObject rtc_pasteur_started;
+    RTCObject rtc_pasteur_finished;
+    RTCObject rtc_pasteur_paused;
+    RTCObject rtc_pasteur_finish_time;
+    RTCObject rtc_pasteur_in_proc;
+    RTCObject rtc_pasteur_in_await;
+
+    // solo func variables
     bool is_solo_heating = false;
     bool is_solo_freezing = false;
 
@@ -33,6 +47,7 @@ private:
     bool is_mixer_error = false;
     bool is_stop_btn_pressed = false;
     bool is_blowgun_call = false;
+    bool is_heaters_available = false;
     int16_t liquid_tempC = 0;
     uint16_t batt_chargeV = 0;
     
@@ -64,24 +79,26 @@ private:
     void blowingResetVolume(bool is_positive);
     void blowingChangePrescaler(bool boot_up = false);
     void selfPasteurChangeMode(bool is_positive);
-    void readSlowSensors();
-    void readMediumSensors();
-    void readFastSensors();
+    void readSensors();
+    void readTempCSensor();
 
 public:
     void init();
     void loadFromEE();
-    void pasteurStart();
+    bool pasteurStart();
     void pasteurPause();
     void pasteurResume();
-    void pasteurFinish();
+    void pasteurFinish(FinishFlag flag);
     void blowgunStart();
     void blowgunFinish();
     void heaterToggle(bool toggle);
-    void mixerToggle(bool toggle);
     void freezingToggle(bool toggle);
+    void mixerToggle(bool toggle);
+    void heatersPID(uint8_t tempC);
     void stopAllFunc();
-    void pasteurTask();
+    bool pasteurTask();
+    void heatingTask();
+    void freezingTask();
     void mainThread();
 };
 

@@ -37,7 +37,7 @@ bool IOUnit::readDigital()
     if (pin_mode == mode::DigitalIN || pin_mode == mode::Relay)
         return is_reverse ? !digitalRead(stm_pin) : digitalRead(stm_pin);
 
-    return is_reverse ? true : false;
+    return false;
 }
 
 uint16_t IOUnit::readAnalog()
