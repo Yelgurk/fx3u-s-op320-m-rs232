@@ -63,11 +63,11 @@ void FXCore::init()
         mb_set_op320_scr.writeValue((uint16_t)SCR_USER_MENU);
         });
     mb_comm_self_accept.addTrigger([this]() -> void {
-        ee_self_pasteur_tempC.writeEE(self_pasteur_tempC = mb_self_pasteur_tempC.readValue());
-        ee_self_heating_tempC.writeEE(self_heating_tempC = mb_self_heating_tempC.readValue());
-        ee_self_freezing_tempC.writeEE(self_freezing_tempC = mb_self_freezing_tempC.readValue());
-        ee_self_pasteur_durat.writeEE(self_pasteur_durat = mb_self_durat_mm.readValue());
-        ee_self_psteur_mode.writeEE(self_pasteur_mode = mb_self_mode_list.readValue());
+        ee_self_pasteur_tempC.writeEE(settings_self_pasteur_tempC = mb_self_pasteur_tempC.readValue());
+        ee_self_heating_tempC.writeEE(settings_self_heating_tempC = mb_self_heating_tempC.readValue());
+        ee_self_freezing_tempC.writeEE(settings_self_freezing_tempC = mb_self_freezing_tempC.readValue());
+        ee_self_pasteur_durat.writeEE(settings_self_pasteur_durat = mb_self_durat_mm.readValue());
+        ee_self_psteur_mode.writeEE(settings_self_pasteur_mode = mb_self_mode_list.readValue());
         loadFromEE();
     });
     mb_comm_self_mode_up.addTrigger([this]() -> void { selfPasteurChangeMode(true); });
@@ -95,6 +95,7 @@ void FXCore::init()
         mb_rtc_YY.writeValue((uint16_t)rtc.getYear());
     });
     TaskManager::newTask(30000, [this]() -> void { readTempCSensor(); });
+    blowgun_washing_task = TaskManager::newTask(0, [this]() -> void { blowgunFinish(); }, true);
 
     delay(50);
     mb_blow_calib_dosage.writeValue((uint16_t)(blow_calib_volume / 10));
@@ -104,8 +105,7 @@ void FXCore::init()
     blowingSelectPreset(blowgun_preset_selected);
     blowingChangePrescaler(true);
 
-    //readFastSensors();
-    //readMediumSensors();
+    //pateur preset select func
 }
 
 void FXCore::loadFromEE()
@@ -123,29 +123,48 @@ void FXCore::loadFromEE()
     mb_blow_calib_range.writeValue((uint16_t)(blowing_calib_range * 100));
 
     // self pasteur
-    mb_self_pasteur_tempC.writeValue((uint16_t)(self_pasteur_tempC = ee_self_pasteur_tempC.readEE()));
-    mb_self_heating_tempC.writeValue((uint16_t)(self_heating_tempC = ee_self_heating_tempC.readEE()));
-    mb_self_freezing_tempC.writeValue((uint16_t)(self_freezing_tempC = ee_self_freezing_tempC.readEE()));
-    mb_self_durat_mm.writeValue((uint16_t)(self_pasteur_durat = ee_self_pasteur_durat.readEE()));
-    mb_self_mode_list.writeValue((uint16_t)(self_pasteur_mode = ee_self_psteur_mode.readEE()));
+    mb_self_pasteur_tempC.writeValue((uint16_t)(settings_self_pasteur_tempC = ee_self_pasteur_tempC.readEE()));
+    mb_self_heating_tempC.writeValue((uint16_t)(settings_self_heating_tempC = ee_self_heating_tempC.readEE()));
+    mb_self_freezing_tempC.writeValue((uint16_t)(settings_self_freezing_tempC = ee_self_freezing_tempC.readEE()));
+    mb_self_durat_mm.writeValue((uint16_t)(settings_self_pasteur_durat = ee_self_pasteur_durat.readEE()));
+    mb_self_mode_list.writeValue((uint16_t)(settings_self_pasteur_mode = ee_self_psteur_mode.readEE()));
 }
 
-bool FXCore::pasteurStart()
+bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index = 0)
 {
     if (is_pasteur_proc_running)
         return false;
     else
         stopAllFunc();
 
+    mb_set_op320_scr.writeValue((uint16_t)SCR_MASTER_PAGE_TIME);
     is_pasteur_proc_running = true;
     is_pasteur_proc_paused = false;
     is_pasteur_part_finished = false;
     is_freezing_part_finished = false;
     is_heating_part_finished = false;
     is_waterJ_filled_yet = false;
-    
-    //is_pasteur_need_in_freezing = false;
-    //is_pasteur_need_in_heating = false;
+
+    if (is_user_call)
+    {
+        is_pasteur_need_in_freezing = settings_self_pasteur_mode >= 1 ? true : false;
+        is_pasteur_need_in_heating = settings_self_pasteur_mode >= 2 ? true : false;
+        pasteur_proc_time_span_mm = settings_self_pasteur_durat;
+        pasteur_proc_pasteur_tempC = settings_self_pasteur_tempC;
+        pasteur_proc_heeting_tempC = settings_self_heating_tempC;
+        pasteur_proc_freezing_tempC = settings_self_freezing_tempC;
+        pasteur_preset_runned = 0;
+    }
+    else
+    {
+        is_pasteur_need_in_freezing = true;
+        is_pasteur_need_in_heating = true;
+        pasteur_proc_time_span_mm = pasteur_preset_pasteur_tempC[preset_index];
+        pasteur_proc_pasteur_tempC = pasteur_preset_pasteur_tempC[preset_index];
+        pasteur_proc_heeting_tempC = pasteur_preset_pasteur_tempC[preset_index];
+        pasteur_proc_freezing_tempC = pasteur_preset_pasteur_tempC[preset_index];
+        pasteur_preset_runned = preset_index + 1;
+    }
     rtc_pasteur_started.setInstTime();
 
     // save to ee rtc of running
@@ -192,6 +211,7 @@ void FXCore::pasteurFinish(FinishFlag flag)
     is_waterJ_filled_yet = false;
     is_pasteur_need_in_freezing = false;
     is_pasteur_need_in_heating = false;
+    mixerToggle(false);
     rtc_pasteur_finished.setInstTime();
 
     // save to ee rtc of finish + code ok or mixer error
@@ -200,11 +220,49 @@ void FXCore::pasteurFinish(FinishFlag flag)
 void FXCore::blowgunStart()
 {
     is_blowgun_call = false;
+    if (blowgun_preset_selected != BLOWGUN_PRESET_WASHING)
+    {
+        if (is_blowgun_washing_runned)
+        {
+            blowgunFinish();
+            delay(1000);
+        }
+
+        io_blowgun_r.write(true);
+        // litres * expected volume / litres in minute of pump
+        for (uint32_t blowing_delay = 60000 * (blowgun_preset_volume[blowgun_preset_selected] * 10) / 38000; blowing_delay > 0;)
+        {
+            if (blowing_delay > 100)
+            {
+                blowing_delay -= 100;
+                delay(100);
+            }
+            else
+            {
+                delay(blowing_delay);
+                blowing_delay = 0;
+            }
+
+            if (mb_get_op320_scr.readValue() != SCR_BLOWING_PAGE)
+                mb_set_op320_scr.writeValue((uint16_t)SCR_BLOWING_PAGE);
+        }
+        io_blowgun_r.write(false);
+    }
+    else
+    {
+        if (!is_blowgun_washing_runned)
+        {
+            is_blowgun_washing_runned = true;
+            blowgun_washing_task->run(blowgun_preset_volume[BLOWGUN_PRESET_WASHING]);
+            io_blowgun_r.write(true);
+        }
+    }
 }
 
-void FXCore::blowgunFinish()
-{
-
+void FXCore::blowgunFinish() {
+    is_blowgun_washing_runned = false;
+    blowgun_washing_task->stop();
+    io_blowgun_r.write(false);
 }
 
 void FXCore::heaterToggle(bool toggle)
@@ -322,29 +380,25 @@ bool FXCore::pasteurTask()
             io_water_jacket_r.write(false);
         }
 
-        //heatersPID([expectedTempC])
-        heatersPID(45);
+        heatersPID(pasteur_proc_pasteur_tempC);
         mixerToggle(true);
 
-        //if (!rtc_pasteur_started.inRange([expectedDurationMM], rtc_pasteur_in_proc))
-        if (!rtc_pasteur_started.inRange(30, rtc_pasteur_in_proc))
+        if (!rtc_pasteur_started.inRange(pasteur_proc_time_span_mm, rtc_pasteur_in_proc))
             is_pasteur_part_finished = true;
     }
 
     if (is_pasteur_need_in_freezing ? !is_freezing_part_finished : false)
     {
-        //freezingTask([pattert value]);
-        freezingTask(45);
-        if (liquid_tempC >= 45)
+        freezingTask(pasteur_proc_freezing_tempC);
+        if (liquid_tempC >= pasteur_proc_freezing_tempC)
             is_freezing_part_finished = true;
         return true;
     }
 
     if (is_pasteur_need_in_heating ? !is_heating_part_finished : false)
     {
-        //heatingTask([pattert value]);
-        heatingTask(45);
-        if (liquid_tempC <= 45)
+        heatingTask(pasteur_proc_heeting_tempC);
+        if (liquid_tempC <= pasteur_proc_heeting_tempC)
             is_heating_part_finished = true;
         return true;
     }
@@ -409,14 +463,47 @@ void FXCore::mainThread()
         pasteurTask();
 
     if (is_solo_heating)
-        //heatingTask([solo value]);
-        heatingTask(45);
+        heatingTask(solo_heating_tempC);
 
     if (is_solo_freezing)
-        //freezingTask([solo value]);
-        freezingTask(45);
+        freezingTask(solo_freezing_tempC);
 
+    displayState();
     //here alarm check for auto calling pasteur preset
+}
+
+void FXCore::displayState()
+{
+    mb_proc_list.writeValue((uint16_t)OP320Process::Await);
+    mb_step_name_list.writeValue((uint16_t)0);
+    mb_step_index_list.writeValue((uint16_t)OP320Step::Await);
+
+    if (is_connected_380V)
+        mb_proc_list.writeValue((uint16_t)OP320Process::Chargering);
+
+    if (is_blowgun_washing_runned)
+        mb_proc_list.writeValue((uint16_t)OP320Process::Washing);
+
+    if (is_solo_heating)
+        mb_proc_list.writeValue((uint16_t)OP320Process::Heating);
+
+    if (is_solo_freezing)
+        mb_proc_list.writeValue((uint16_t)OP320Process::Freezing);
+
+    if (is_pasteur_proc_running)
+    {
+        switch(pasteur_preset_runned)
+        {
+            case 0: mb_proc_list.writeValue((uint16_t)OP320Process::PasteurSelf);
+            case 1: mb_proc_list.writeValue((uint16_t)OP320Process::PasteurP1);
+            case 2: mb_proc_list.writeValue((uint16_t)OP320Process::PasteurP2);
+            case 3: mb_proc_list.writeValue((uint16_t)OP320Process::PasteurP3);
+        }
+
+        mb_step_name_list.writeValue((uint16_t)0);
+
+        
+    }
 }
 
 /* PRIVATE + PROTECTED */
@@ -488,13 +575,13 @@ void FXCore::blowingChangePrescaler(bool boot_up)
 
 void FXCore::selfPasteurChangeMode(bool is_positive)
 {
-    self_pasteur_mode = is_positive ? ++self_pasteur_mode : --self_pasteur_mode;
+    settings_self_pasteur_mode = is_positive ? ++settings_self_pasteur_mode : --settings_self_pasteur_mode;
 
-    if (self_pasteur_mode > 2)
-        self_pasteur_mode = 2;
+    if (settings_self_pasteur_mode > 2)
+        settings_self_pasteur_mode = 2;
 
-    ee_self_psteur_mode.writeEE(self_pasteur_mode);
-    mb_self_mode_list.writeValue((uint16_t)self_pasteur_mode);
+    ee_self_psteur_mode.writeEE(settings_self_pasteur_mode);
+    mb_self_mode_list.writeValue((uint16_t)settings_self_pasteur_mode);
 }
 
 void FXCore::readSensors()

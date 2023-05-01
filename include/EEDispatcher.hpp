@@ -6,6 +6,7 @@
 #define _eedispatcher_hpp
 
 #define BLOWGUN_PRESET_CNT 4
+#define PASTEUR_PRESET_CNT 3
 
 class EEDispatcher
 {

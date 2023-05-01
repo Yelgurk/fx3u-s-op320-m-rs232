@@ -69,6 +69,7 @@ public:
            mb_hysteresis = MBUnit(mb_au16data, 46, type::Uint16),
            mb_blowing_performance_lm = MBUnit(mb_au16data, 47, type::Uint16),
            mb_notification_list = MBUnit(mb_au16data, 48, type::Uint16),
+
            mb_comm_stop_proc = MBUnit(mb_au16data, 784, type::Coil),
            mb_comm_blow_preset_1 = MBUnit(mb_au16data, 785, type::Coil),
            mb_comm_blow_preset_2 = MBUnit(mb_au16data, 786, type::Coil),
@@ -85,6 +86,7 @@ public:
            mb_comm_rtc_new_cancel = MBUnit(mb_au16data, 797, type::Coil),
            mb_comm_rtc_new_accept = MBUnit(mb_au16data, 798, type::Coil),
            mb_comm_blow_calib_inc = MBUnit(mb_au16data, 799, type::Coil),
+           
            mb_comm_blow_calib_dec = MBUnit(mb_au16data, 800, type::Coil),
            mb_comm_self_cancel = MBUnit(mb_au16data, 801, type::Coil),
            mb_comm_self_accept = MBUnit(mb_au16data, 802, type::Coil),
@@ -101,6 +103,7 @@ public:
            mb_master_water_saving_monitor = MBUnit(mb_au16data, 813, type::Coil),
            mb_master_hysteresis_monitor = MBUnit(mb_au16data, 814, type::Coil),
            mb_master_cancel = MBUnit(mb_au16data, 815, type::Coil),
+           
            mb_master_accept = MBUnit(mb_au16data, 816, type::Coil),
            mb_master_full_hard_reset = MBUnit(mb_au16data, 817, type::Coil);
 
