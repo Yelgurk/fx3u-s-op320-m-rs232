@@ -205,7 +205,7 @@ void FXCore::pasteurFinish(FinishFlag flag)
 {
     is_pasteur_proc_running = false;
     is_pasteur_proc_paused = false;
-    is_pasteur_part_finished = false;
+    is_pasteur_part_finished = true;
     is_freezing_part_finished = false;
     is_heating_part_finished = false;
     is_waterJ_filled_yet = false;
@@ -369,7 +369,6 @@ bool FXCore::pasteurTask()
         if (!is_water_in_jacket)
         {
             io_water_jacket_r.write(true);
-            // write step to op320
             return true;
         }
         else
@@ -414,15 +413,11 @@ void FXCore::heatingTask(uint8_t expectedTempC)
 {
     mixerToggle(true);
     if (!is_water_in_jacket)
-    {
         io_water_jacket_r.write(true);
-        // write step to op320
-    }
     else
     {
         io_water_jacket_r.write(false);
         heatersPID(expectedTempC);
-        // write step to op320
     }
 }
 
@@ -430,15 +425,9 @@ void FXCore::freezingTask(uint8_t expectedTempC)
 {
     mixerToggle(true);
     if (liquid_tempC > expectedTempC)
-    {
         io_water_jacket_r.write(true);
-        // write step to op320
-    }
     else
-    {
         io_water_jacket_r.write(false);
-        // write step to op320
-    }
 }
 
 void FXCore::mainThread()
@@ -485,10 +474,26 @@ void FXCore::displayState()
         mb_proc_list.writeValue((uint16_t)OP320Process::Washing);
 
     if (is_solo_heating)
+    {
         mb_proc_list.writeValue((uint16_t)OP320Process::Heating);
+        mb_step_name_list.writeValue((uint16_t)1);
+
+        if (!is_water_in_jacket)
+            mb_step_index_list.writeValue((uint16_t)OP320Step::WaterJacket);
+        else
+            mb_step_index_list.writeValue((uint16_t)OP320Step::HeatingTo);
+    }
 
     if (is_solo_freezing)
+    {
         mb_proc_list.writeValue((uint16_t)OP320Process::Freezing);
+        mb_step_name_list.writeValue((uint16_t)1);
+
+        if (!is_water_in_jacket)
+            mb_step_index_list.writeValue((uint16_t)OP320Step::WaterJacket);
+        else
+            mb_step_index_list.writeValue((uint16_t)OP320Step::WaterJCirculation);
+    }
 
     if (is_pasteur_proc_running)
     {
@@ -500,9 +505,32 @@ void FXCore::displayState()
             case 3: mb_proc_list.writeValue((uint16_t)OP320Process::PasteurP3);
         }
 
-        mb_step_name_list.writeValue((uint16_t)0);
+        mb_step_name_list.writeValue((uint16_t)1);
 
+        if (!is_waterJ_filled_yet)
+            mb_step_index_list.writeValue((uint16_t)OP320Step::WaterJacket);
         
+        if (!is_pasteur_part_finished && is_waterJ_filled_yet && liquid_tempC < pasteur_proc_pasteur_tempC) //-[hysteresis val])
+            mb_step_index_list.writeValue((uint16_t)OP320Step::PasteurHeating);
+
+        if (!is_pasteur_part_finished && is_waterJ_filled_yet && liquid_tempC >= pasteur_proc_pasteur_tempC)
+            mb_step_index_list.writeValue((uint16_t)OP320Step::PasteurProc);
+
+        if (is_pasteur_part_finished && is_pasteur_need_in_freezing ? is_freezing_part_finished : false)
+            mb_step_index_list.writeValue((uint16_t)OP320Step::FreezingTo);
+        
+        if (is_pasteur_part_finished && is_pasteur_need_in_heating ? is_heating_part_finished : false)
+            mb_step_index_list.writeValue((uint16_t)OP320Step::HeatingTo);
+    }
+
+    if (!is_pasteur_proc_running && is_pasteur_part_finished)
+    {
+        mb_step_name_list.writeValue((uint16_t)1);
+        mb_step_index_list.writeValue((uint16_t)OP320Step::PasteurFinish);
+
+        rtc_current_time.setInstTime();
+        if (!rtc_pasteur_finished.inRange(20, rtc_current_time))
+            is_pasteur_part_finished = false;
     }
 }
 
