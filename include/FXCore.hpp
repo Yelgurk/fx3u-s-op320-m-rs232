@@ -14,12 +14,14 @@
 #define SCR_MASTER_PAGE_TIME 3
 #define SCR_BLOWING_PAGE 4
 #define SCR_USER_MENU 5
+#define SCR_ERROR_NOTIFY 12
 #define PASTEUR_AWAIT_LIMIT_MM 60
 #define BLOWGUN_PRESET_WASHING 3
 
 enum class FinishFlag { Success, UserCall, MixerError, Power380vError, WaterJacketError };
 enum class OP320Process { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3 };
-enum class OP320Step { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo };
+enum class OP320Step { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation };
+enum class OP320Error { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait };
 
 class FXCore : protected MBDispatcher,
                protected IODispatcher,
@@ -50,10 +52,16 @@ private:
     uint8_t pasteur_preset_runned = 0;
 
     // pasteur preset variables
+    RTCObject pasteur_rtc_triggers[PASTEUR_PRESET_CNT];
     uint8_t pasteur_preset_pasteur_tempC[PASTEUR_PRESET_CNT] { 0 };
     uint8_t pasteur_preset_heating_tempC[PASTEUR_PRESET_CNT] { 0 };
     uint8_t pasteur_preset_freezing_tempC[PASTEUR_PRESET_CNT] { 0 };
     uint8_t pasteur_preset_durat_mm[PASTEUR_PRESET_CNT] { 0 };
+    uint8_t pasteur_preset_run_on_hh[PASTEUR_PRESET_CNT] { 0 };
+    uint8_t pasteur_preset_run_on_mm[PASTEUR_PRESET_CNT] { 0 };
+    uint8_t pasteur_preset_run_toggle[PASTEUR_PRESET_CNT] { 0 };
+    uint8_t pasteur_preset_is_runned_today[PASTEUR_PRESET_CNT] { 0 };
+    uint8_t pasteur_preset_selected = 0;
 
     // blowgun preset variables
     int16_t blowgun_preset_volume[BLOWGUN_PRESET_CNT] { 0 };
@@ -99,6 +107,7 @@ private:
     void blowingResetVolume(bool is_positive);
     void blowingChangePrescaler(bool boot_up = false);
     void selfPasteurChangeMode(bool is_positive);
+    void autoPasteurSelectPreset(uint8_t preset_id);
     void readSensors();
     void readTempCSensor();
 
@@ -106,7 +115,7 @@ public:
     void init();
     void loadFromEE();
     bool pasteurStart(bool is_user_call, uint8_t preset_index = 0);
-    void pasteurPause();
+    void pasteurPause(OP320Error to_op320);
     void pasteurResume();
     void pasteurFinish(FinishFlag flag);
     void blowgunStart();

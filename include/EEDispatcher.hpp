@@ -15,6 +15,14 @@ private:
 
 public:
     EEUnit **ee_blowgun_preset_arr;
+    EEUnit **ee_auto_pasteur_tempC_arr;
+    EEUnit **ee_auto_heating_tempC_arr;
+    EEUnit **ee_auto_freezing_tempC_arr;
+    EEUnit **ee_auto_pasteur_duratMM_arr;    
+    EEUnit **ee_auto_run_on_hh_arr;
+    EEUnit **ee_auto_run_on_mm_arr;
+    EEUnit **ee_auto_run_toggle_arr;
+    EEUnit **ee_auto_is_runned_today_arr;  
 
     EEUnit ee_blowgun_preset_1 = EEUnit(0x0000, &ee24c64, false),
            ee_blowgun_preset_2 = EEUnit(0x0001, &ee24c64, false),
@@ -44,21 +52,27 @@ public:
            ee_auto2_pasteur_durat = EEUnit(0x0025, &ee24c64, false),
            ee_auto3_pasteur_durat = EEUnit(0x0026, &ee24c64, false),
            ee_auto1_run_on_hh = EEUnit(0x0027, &ee24c64, false),
-           ee_auto1_run_on_mm = EEUnit(0x0028, &ee24c64, false),
            ee_auto2_run_on_hh = EEUnit(0x0029, &ee24c64, false),
-           ee_auto2_run_on_mm = EEUnit(0x0030, &ee24c64, false),
            ee_auto3_run_on_hh = EEUnit(0x0031, &ee24c64, false),
+           ee_auto1_run_on_mm = EEUnit(0x0028, &ee24c64, false),
+           ee_auto2_run_on_mm = EEUnit(0x0030, &ee24c64, false),
            ee_auto3_run_on_mm = EEUnit(0x0032, &ee24c64, false),
            ee_auto1_toggle = EEUnit(0x0033, &ee24c64, false),
            ee_auto2_toggle = EEUnit(0x0034, &ee24c64, false),
            ee_auto3_toggle = EEUnit(0x0035, &ee24c64, false),
-           ee_master_water_saving = EEUnit(0x0036, &ee24c64, false),
-           ee_master_hysteresis_toggle = EEUnit(0x0037, &ee24c64, false),
-           ee_master_hysteresis_value = EEUnit(0x0038, &ee24c64, false),
-           ee_master_4ma_adc_value = EEUnit(0x0039, &ee24c64, false),
-           ee_master_20ma_adc_value = EEUnit(0x0040, &ee24c64, false),
-           ee_master_pump_perf_lm = EEUnit(0x0041, &ee24c64, false);
-           
+           ee_auto1_is_runned_today = EEUnit(0x0036, &ee24c64, false),
+           ee_auto2_is_runned_today = EEUnit(0x0037, &ee24c64, false),
+           ee_auto3_is_runned_today = EEUnit(0x0038, &ee24c64, false),
+           ee_master_water_saving = EEUnit(0x0039, &ee24c64, false),
+           ee_master_hysteresis_toggle = EEUnit(0x0040, &ee24c64, false),
+           ee_master_hysteresis_value = EEUnit(0x0041, &ee24c64, false),
+           ee_master_4ma_adc_value = EEUnit(0x0042, &ee24c64, false),
+           ee_master_20ma_adc_value = EEUnit(0x0043, &ee24c64, false),
+           ee_master_pump_perf_lm = EEUnit(0x0044, &ee24c64, false),
+
+           ee_dynamic_rtc_curr_hh = EEUnit(0x0050, &ee24c64, false, ee24c64.getSectorStartAddr()),
+           ee_dynamic_rtc_curr_mm = EEUnit(0x0051, &ee24c64, false, ee24c64.getSectorStartAddr()),
+           ee_dynamic_rtc_curr_ss = EEUnit(0x0052, &ee24c64, true, ee24c64.getSectorStartAddr());
             
     bool init();
 };

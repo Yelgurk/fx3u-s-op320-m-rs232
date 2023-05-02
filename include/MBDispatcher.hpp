@@ -105,7 +105,10 @@ public:
            mb_master_cancel = MBUnit(mb_au16data, 815, type::Coil),
            
            mb_master_accept = MBUnit(mb_au16data, 816, type::Coil),
-           mb_master_full_hard_reset = MBUnit(mb_au16data, 817, type::Coil);
+           mb_master_full_hard_reset = MBUnit(mb_au16data, 817, type::Coil),
+           mb_comm_self_pasteur_start = MBUnit(mb_au16data, 818, type::Coil),
+           mb_comm_solo_heating_toggle = MBUnit(mb_au16data, 819, type::Coil),
+           mb_comm_solo_freezing_toggle = MBUnit(mb_au16data, 820, type::Coil);
 
     void init();
     void poll();

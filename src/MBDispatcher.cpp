@@ -34,7 +34,12 @@ void MBDispatcher::init()
         &mb_master_hysteresis_toggle,
         &mb_master_cancel,
         &mb_master_accept,
-        &mb_master_full_hard_reset
+        &mb_master_full_hard_reset,
+        &mb_master_accept,
+        &mb_master_full_hard_reset,
+        &mb_comm_self_pasteur_start,
+        &mb_comm_solo_heating_toggle,
+        &mb_comm_solo_freezing_toggle
     };
 
     this->op320 = Modbus(FX3U_ID, Serial, 0);

@@ -23,7 +23,7 @@ void FXCore::init()
     mb_comm_pass_9.addTrigger([this]() -> void {  });
     mb_comm_solo_tempC_cancel.addTrigger([this]() -> void {
         mb_solo_heating_tempC.writeValue((uint16_t)ee_solo_heating_tempC.readEE());
-        mb_solo_freezing_tempC.writeValue((uint16_t)solo_freezing_tempC);
+        mb_solo_freezing_tempC.writeValue((uint16_t)ee_solo_freezing_tempC.readEE());
         });
     mb_comm_solo_tempC_accept.addTrigger([this]() -> void {
         ee_solo_heating_tempC.writeEE(solo_heating_tempC = mb_solo_heating_tempC.readValue());
@@ -68,32 +68,55 @@ void FXCore::init()
         ee_self_freezing_tempC.writeEE(settings_self_freezing_tempC = mb_self_freezing_tempC.readValue());
         ee_self_pasteur_durat.writeEE(settings_self_pasteur_durat = mb_self_durat_mm.readValue());
         ee_self_psteur_mode.writeEE(settings_self_pasteur_mode = mb_self_mode_list.readValue());
-        loadFromEE();
     });
     mb_comm_self_mode_up.addTrigger([this]() -> void { selfPasteurChangeMode(true); });
     mb_comm_self_mode_down.addTrigger([this]() -> void { selfPasteurChangeMode(false); });
-    mb_comm_auto_preset_1.addTrigger([this]() -> void {  });
-    mb_comm_auto_preset_2.addTrigger([this]() -> void {  });
-    mb_comm_auto_preset_3.addTrigger([this]() -> void {  });
-    mb_comm_auto_toggle.addTrigger([this]() -> void {  });
-    mb_comm_auto_cancel.addTrigger([this]() -> void {  });
-    mb_comm_auto_accept.addTrigger([this]() -> void {  });
+    mb_comm_auto_preset_1.addTrigger([this]() -> void { autoPasteurSelectPreset(0); });
+    mb_comm_auto_preset_2.addTrigger([this]() -> void { autoPasteurSelectPreset(1); });
+    mb_comm_auto_preset_3.addTrigger([this]() -> void { autoPasteurSelectPreset(2); });
+    mb_comm_auto_toggle.addTrigger([this]() -> void { autoPasteurToggleOnOff(); });
+    mb_comm_auto_cancel.addTrigger([this]() -> void {
+        loadFromEE();
+        mb_set_op320_scr.writeValue((uint16_t)SCR_USER_MENU);
+    });
+    mb_comm_auto_accept.addTrigger([this]() -> void {
+        ee_auto_pasteur_tempC_arr[pasteur_preset_selected]->writeEE(pasteur_preset_pasteur_tempC[pasteur_preset_selected] = mb_auto_pasteur_tempC.readValue());
+        ee_auto_freezing_tempC_arr[pasteur_preset_selected]->writeEE(pasteur_preset_freezing_tempC[pasteur_preset_selected] = mb_auto_freezing_tempC.readValue());
+        ee_auto_heating_tempC_arr[pasteur_preset_selected]->writeEE(pasteur_preset_heating_tempC[pasteur_preset_selected] = mb_auto_heating_tempC.readValue());
+        ee_auto_pasteur_duratMM_arr[pasteur_preset_selected]->writeEE(pasteur_preset_durat_mm[pasteur_preset_selected] = mb_auto_durat_mm.readValue());
+        ee_auto_run_on_hh_arr[pasteur_preset_selected]->writeEE(pasteur_preset_run_on_hh[pasteur_preset_selected] = mb_auto_run_rtc_hh.readValue());
+        ee_auto_run_on_mm_arr[pasteur_preset_selected]->writeEE(pasteur_preset_run_on_mm[pasteur_preset_selected] = mb_auto_run_rtc_mm.readValue());
+        pasteur_rtc_triggers[pasteur_preset_selected].setTime(
+            pasteur_preset_run_on_hh[pasteur_preset_selected],
+            pasteur_preset_run_on_mm[pasteur_preset_selected],
+            0, 0, 0, 0
+        );
+        autoPasteurSelectPreset(pasteur_preset_selected);
+    });
     mb_master_water_saving_toggle.addTrigger([this]() -> void {  });
     mb_master_hysteresis_toggle.addTrigger([this]() -> void {  });
     mb_master_cancel.addTrigger([this]() -> void {  });
     mb_master_accept.addTrigger([this]() -> void {  });
     mb_master_full_hard_reset.addTrigger([this]() -> void {  });
+    mb_comm_self_pasteur_start.addTrigger([this]() -> void { pasteurStart(true); });
+    mb_comm_solo_heating_toggle.addTrigger([this]() -> void { heaterToggle(!is_solo_heating); });
+    mb_comm_solo_freezing_toggle.addTrigger([this]() -> void { freezingToggle(!is_solo_freezing); });
+
+
 
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); });
     TaskManager::newTask(100,   [this]() -> void { readSensors(); mainThread(); });
     TaskManager::newTask(200,   [this]() -> void {
-        mb_rtc_hh.writeValue((uint16_t)rtc.getHours());
-        mb_rtc_mm.writeValue((uint16_t)rtc.getMinutes());
-        mb_rtc_ss.writeValue((uint16_t)rtc.getSeconds());
-        mb_rtc_DD.writeValue((uint16_t)rtc.getDay());
-        mb_rtc_MM.writeValue((uint16_t)rtc.getMonth());
-        mb_rtc_YY.writeValue((uint16_t)rtc.getYear());
+        rtc_current_time.setInstTime();
+        mb_rtc_hh.writeValue((uint16_t)rtc_current_time.hour);
+        mb_rtc_mm.writeValue((uint16_t)rtc_current_time.minute);
+        mb_rtc_ss.writeValue((uint16_t)rtc_current_time.second);
+        mb_rtc_DD.writeValue((uint16_t)rtc_current_time.day);
+        mb_rtc_MM.writeValue((uint16_t)rtc_current_time.month);
+        mb_rtc_YY.writeValue((uint16_t)rtc_current_time.year);
+
     });
+    TaskManager::newTask(10000, [this]() -> );
     TaskManager::newTask(30000, [this]() -> void { readTempCSensor(); });
     blowgun_washing_task = TaskManager::newTask(0, [this]() -> void { blowgunFinish(); }, true);
 
@@ -104,8 +127,30 @@ void FXCore::init()
     delay(50);
     blowingSelectPreset(blowgun_preset_selected);
     blowingChangePrescaler(true);
+    autoPasteurSelectPreset(pasteur_preset_selected);
 
     //pateur preset select func
+}
+
+void FXCore::startupRTC()
+{
+    uint32_t rtc_fullDays = rtc.getYear() * 365 + rtc.getMonth() * 31 + rtc.getDay();
+    uint32_t ee_fullDays = ee_rtc_curr_year.readEE() * 365 + ee_rtc_curr_month.readEE() * 31 + ee_rtc_curr_day.readEE();
+
+    if (rtc_fullDays > ee_fullDays)
+    {
+        ee_rtc_curr_day.writeEE();
+        ee_rtc_curr_month.writeEE();
+        ee_rtc_curr_year.writeEE();
+    }
+    else if (rtc_fullDays < ee_fullDays)
+    {
+
+    }
+    else
+    {
+
+    }
 }
 
 void FXCore::loadFromEE()
@@ -128,6 +173,20 @@ void FXCore::loadFromEE()
     mb_self_freezing_tempC.writeValue((uint16_t)(settings_self_freezing_tempC = ee_self_freezing_tempC.readEE()));
     mb_self_durat_mm.writeValue((uint16_t)(settings_self_pasteur_durat = ee_self_pasteur_durat.readEE()));
     mb_self_mode_list.writeValue((uint16_t)(settings_self_pasteur_mode = ee_self_psteur_mode.readEE()));
+
+    // auto pasteur
+    for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
+    {
+        pasteur_preset_pasteur_tempC[index] = ee_auto_pasteur_tempC_arr[index]->readEE();
+        pasteur_preset_heating_tempC[index] = ee_auto_heating_tempC_arr[index]->readEE();
+        pasteur_preset_freezing_tempC[index] = ee_auto_freezing_tempC_arr[index]->readEE();
+        pasteur_preset_durat_mm[index] = ee_auto_pasteur_duratMM_arr[index]->readEE();
+        pasteur_preset_run_on_hh[index] = ee_auto_run_on_hh_arr[index]->readEE();
+        pasteur_preset_run_on_mm[index] = ee_auto_run_on_mm_arr[index]->readEE();
+        pasteur_preset_run_toggle[index] = ee_auto_run_toggle_arr[index]->readEE();
+        pasteur_preset_is_runned_today[index] = ee_auto_is_runned_today_arr[index]->readEE();
+        pasteur_rtc_triggers[index].setTime(pasteur_preset_run_on_hh[index], pasteur_preset_run_on_mm[index], 0, 0, 0, 0);
+    }
 }
 
 bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index = 0)
@@ -172,7 +231,7 @@ bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index = 0)
     return true;
 }
 
-void FXCore::pasteurPause()
+void FXCore::pasteurPause(OP320Error to_op320)
 {
     if (is_pasteur_proc_running)
     {
@@ -183,6 +242,9 @@ void FXCore::pasteurPause()
         io_mixer_r.write(false);
         if (!is_water_in_jacket)
             io_water_jacket_r.write(true);
+
+        mb_notification_list.writeValue((uint16_t)to_op320);
+        mb_set_op320_scr.writeValue((uint16_t)SCR_ERROR_NOTIFY);
 
         // save to ee rtc of pause + pause error code
     }
@@ -196,25 +258,41 @@ void FXCore::pasteurResume()
 
         io_mixer_r.write(true);
         io_water_jacket_r.write(false);
+        
+        // check resume response to pause rtc and finish or save to ee rtc of resume
     }
-
-    // check resume response to pause rtc and finish or save to ee rtc of resume
 }
 
 void FXCore::pasteurFinish(FinishFlag flag)
 {
-    is_pasteur_proc_running = false;
-    is_pasteur_proc_paused = false;
-    is_pasteur_part_finished = true;
-    is_freezing_part_finished = false;
-    is_heating_part_finished = false;
-    is_waterJ_filled_yet = false;
-    is_pasteur_need_in_freezing = false;
-    is_pasteur_need_in_heating = false;
-    mixerToggle(false);
-    rtc_pasteur_finished.setInstTime();
+    if (is_pasteur_proc_running)
+    {
+        is_pasteur_proc_running = false;
+        is_pasteur_proc_paused = false;
+        is_pasteur_part_finished = true;
+        is_freezing_part_finished = false;
+        is_heating_part_finished = false;
+        is_waterJ_filled_yet = false;
+        is_pasteur_need_in_freezing = false;
+        is_pasteur_need_in_heating = false;
+        mixerToggle(false);
+        rtc_pasteur_finished.setInstTime();
 
-    // save to ee rtc of finish + code ok or mixer error
+        if (flag != FinishFlag::Success && flag != FinishFlag::UserCall)
+        {
+            OP320Error to_op320;
+            switch(flag)
+            {
+                case FinishFlag::MixerError: to_op320 = OP320Error::Mixer; break;
+                case FinishFlag::Power380vError: to_op320 = OP320Error::PowerMoreHour; break;
+                case FinishFlag::WaterJacketError: to_op320 = OP320Error::WaterMoreHour; break;
+            }
+            mb_notification_list.writeValue((uint16_t)to_op320);
+            mb_set_op320_scr.writeValue((uint16_t)SCR_ERROR_NOTIFY);
+        }
+
+        // save to ee rtc of finish + code ok or mixer error
+    }
 }
 
 void FXCore::blowgunStart()
@@ -341,7 +419,6 @@ bool FXCore::pasteurTask()
         if (is_mixer_error)
         {
             pasteurFinish(FinishFlag::MixerError);
-            // go to notify scr + set mb_notify val
             return false;
         }
 
@@ -357,7 +434,7 @@ bool FXCore::pasteurTask()
 
         if ((!is_connected_380V || (is_waterJ_filled_yet ? !is_water_in_jacket : false)) && !is_pasteur_proc_paused)
         {
-            pasteurPause();
+            pasteurPause(!is_connected_380V ? OP320Error::Power380vOut : OP320Error::WaterAwait);
             return false;
         }
         else if ((!is_connected_380V || (is_waterJ_filled_yet ? !is_water_in_jacket : false)) && is_pasteur_proc_paused)
@@ -428,6 +505,17 @@ void FXCore::freezingTask(uint8_t expectedTempC)
         io_water_jacket_r.write(true);
     else
         io_water_jacket_r.write(false);
+}
+
+void FXCore::checkAutoStartup()
+{
+    for (uint8_t templ_id = 0; templ_id < PASTEUR_PRESET_CNT; templ_id++)
+    {
+        if (pasteur_preset_run_toggle[templ_id] == 1 &&
+            pasteur_preset_is_runned_today[templ_id] == 0 &&
+            pasteur_rtc_triggers[templ_id].inRange())
+
+    }
 }
 
 void FXCore::mainThread()
@@ -528,7 +616,6 @@ void FXCore::displayState()
         mb_step_name_list.writeValue((uint16_t)1);
         mb_step_index_list.writeValue((uint16_t)OP320Step::PasteurFinish);
 
-        rtc_current_time.setInstTime();
         if (!rtc_pasteur_finished.inRange(20, rtc_current_time))
             is_pasteur_part_finished = false;
     }
@@ -610,6 +697,28 @@ void FXCore::selfPasteurChangeMode(bool is_positive)
 
     ee_self_psteur_mode.writeEE(settings_self_pasteur_mode);
     mb_self_mode_list.writeValue((uint16_t)settings_self_pasteur_mode);
+}
+
+void FXCore::autoPasteurSelectPreset(uint8_t preset_id)
+{
+    mb_auto_pasteur_tempC.writeValue((uint16_t)pasteur_preset_pasteur_tempC[preset_id]);
+    mb_auto_freezing_tempC.writeValue((uint16_t)pasteur_preset_freezing_tempC[preset_id]);
+    mb_auto_heating_tempC.writeValue((uint16_t)pasteur_preset_heating_tempC[preset_id]);
+    mb_auto_durat_mm.writeValue((uint16_t)pasteur_preset_durat_mm[preset_id]);
+    mb_auto_run_rtc_hh.writeValue((uint16_t)pasteur_preset_run_on_hh[preset_id]);
+    mb_auto_run_rtc_mm.writeValue((uint16_t)pasteur_preset_run_on_mm[preset_id]);
+    mb_auto_preset_list.writeValue((uint16_t)preset_id);
+    mb_auto_preset_toggle.writeValue((uint16_t)pasteur_preset_run_toggle[preset_id]);
+}
+
+void FXCore::autoPasteurToggleOnOff()
+{
+    if (pasteur_preset_run_toggle[pasteur_preset_selected] == 0)
+        pasteur_preset_run_toggle[pasteur_preset_selected] = 1;
+    else
+        pasteur_preset_run_toggle[pasteur_preset_selected] = 0;
+    ee_auto_run_toggle_arr[pasteur_preset_selected]->writeEE(pasteur_preset_run_toggle[pasteur_preset_selected]);
+    autoPasteurSelectPreset(pasteur_preset_selected);
 }
 
 void FXCore::readSensors()

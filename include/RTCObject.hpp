@@ -8,6 +8,13 @@ struct RTCObject
 {
 private:
     STM32RTC& rtc = STM32RTC::getInstance();
+    bool isRelative()
+    {
+        if (day == 0 && month == 0 && year == 0)
+            return true;
+        else
+            return false;
+    }
 
 public:
     uint8_t hour;
@@ -16,6 +23,7 @@ public:
     uint8_t year;
     uint8_t month;
     uint8_t day;
+    bool successComparedToday = false;
 
     RTCObject() {
         setInstTime();
@@ -41,17 +49,50 @@ public:
 
     bool inRange(uint8_t compMinutes, RTCObject &compare)
     {
-        if (compare.day != day || compare.month != month || compare.year != year)
+        if (!isRelative && compare.day != day || compare.month != month || compare.year != year)
             return false;
         
         uint32_t currSec = ((hour * 60) + minute) * 60 + second;
         uint32_t compSec = ((compare.hour * 60) + compare.minute) * 60 + compare.second;
-        uint32_t duration = (currSec > compSec ? currSec - compSec : compSec - currSec) / 60;
+        
+        if (currSec > compSec)
+            return false;
+        else
+        {
+            uint32_t duration = (compSec - currSec) / 60;
+            if (duration < compMinutes)
+                return true;
+            else
+                return false;
+        }
+    }
 
-        if (duration < compMinutes)
-            return true;
+    bool inRangeOnce(uint8_t compMinutes, RTCObject &compare)
+    {
+        if (!successComparedToday)
+        {
+            bool response = inRange(compMinutes, compare);
+            if (response)
+                successComparedToday = true;
+            return response;
+        }
         else
             return false;
+    }
+
+    bool outRange(uint8_t compMinutes, RTCObject &compare) {
+        return !inRange(compMinutes, compare);
+    }
+
+    bool outRangeOnce(uint8_t compMinutes, RTCObject &compare)
+    {
+        if (!successComparedToday)
+        {
+            bool response = outRange(compMinutes, compare);
+            if (response)
+                successComparedToday = true;
+            return response;
+        }
     }
 };
 
