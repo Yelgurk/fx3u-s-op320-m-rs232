@@ -64,6 +64,7 @@ private:
     uint8_t pasteur_preset_selected = 0;
 
     // blowgun preset variables
+    RTCObject blowgun_start_washing_time;
     int16_t blowgun_preset_volume[BLOWGUN_PRESET_CNT] { 0 };
     uint8_t blowgun_prescaler_table[3] { 10, 25, 50 };
     uint8_t blowgun_pretime_table[3] { 15, 30, 60 };
@@ -108,18 +109,21 @@ private:
     void blowingChangePrescaler(bool boot_up = false);
     void selfPasteurChangeMode(bool is_positive);
     void autoPasteurSelectPreset(uint8_t preset_id);
+    void autoPasteurToggleOnOff();
     void readSensors();
     void readTempCSensor();
 
 public:
     void init();
+    void checkRTC(bool is_plc_start_up = false);
+    void setNewRTC();
     void loadFromEE();
     bool pasteurStart(bool is_user_call, uint8_t preset_index = 0);
     void pasteurPause(OP320Error to_op320);
     void pasteurResume();
     void pasteurFinish(FinishFlag flag);
     void blowgunStart();
-    void blowgunFinish();
+    void blowgunFinish(bool forced = false);
     void heaterToggle(bool toggle);
     void freezingToggle(bool toggle);
     void mixerToggle(bool toggle);
@@ -128,6 +132,7 @@ public:
     bool pasteurTask();
     void heatingTask(uint8_t expectedTempC);
     void freezingTask(uint8_t expectedTempC);
+    void checkAutoStartup();
     void mainThread();
     void displayState();
 };

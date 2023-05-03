@@ -8,6 +8,10 @@ void MBDispatcher::init()
         &mb_comm_blow_preset_2,
         &mb_comm_blow_preset_3,
         &mb_comm_blow_preset_4,
+        &mb_comm_blow_preset_1,
+        &mb_comm_blow_preset_2,
+        &mb_comm_blow_preset_3,
+        &mb_comm_blow_preset_4,
         &mb_comm_blow_vInc,
         &mb_comm_blow_vDec,
         &mb_comm_blow_prescaler,
@@ -35,11 +39,10 @@ void MBDispatcher::init()
         &mb_master_cancel,
         &mb_master_accept,
         &mb_master_full_hard_reset,
-        &mb_master_accept,
-        &mb_master_full_hard_reset,
         &mb_comm_self_pasteur_start,
         &mb_comm_solo_heating_toggle,
-        &mb_comm_solo_freezing_toggle
+        &mb_comm_solo_freezing_toggle,
+        &mb_comm_blowgun_run_btn
     };
 
     this->op320 = Modbus(FX3U_ID, Serial, 0);
@@ -63,5 +66,8 @@ void MBDispatcher::poll_error() { }
 void MBDispatcher::commCheck()
 {
     for (uint8_t index = 0; index < COMM_COUNT; index++)
-        mb_comm_arr[index]->triggerFired();
+    {
+        if (index < 1 || index > 4)
+            mb_comm_arr[index]->triggerFired();
+    }
 }

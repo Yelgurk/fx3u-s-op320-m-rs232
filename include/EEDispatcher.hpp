@@ -69,6 +69,11 @@ public:
            ee_master_4ma_adc_value = EEUnit(0x0042, &ee24c64, false),
            ee_master_20ma_adc_value = EEUnit(0x0043, &ee24c64, false),
            ee_master_pump_perf_lm = EEUnit(0x0044, &ee24c64, false),
+           ee_safe_is_pasteur_runned = EEUnit(0x0045, &ee24c64, false),
+           ee_safe_is_pasteur_finished = EEUnit(0x0046, &ee24c64, false),
+           ee_safe_pasteur_estimated_mm = EEUnit(0x0047, &ee24c64, false), 
+           ee_safe_is_heating_finished = EEUnit(0x0048, &ee24c64, false),
+           ee_safe_is_freezing_finished = EEUnit(0x0049, &ee24c64, false),
 
            ee_dynamic_rtc_curr_hh = EEUnit(0x0050, &ee24c64, false, ee24c64.getSectorStartAddr()),
            ee_dynamic_rtc_curr_mm = EEUnit(0x0051, &ee24c64, false, ee24c64.getSectorStartAddr()),

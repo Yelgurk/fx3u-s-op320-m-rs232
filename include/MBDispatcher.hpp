@@ -7,7 +7,7 @@
 #ifndef _mbdispatcher_hpp
 #define _mbdispatcher_hpp
 
-#define COMM_COUNT 32
+#define COMM_COUNT (36 + 4)
 
 class MBDispatcher
 {
@@ -100,15 +100,17 @@ public:
            mb_comm_auto_accept = MBUnit(mb_au16data, 810, type::Coil),
            mb_master_water_saving_toggle = MBUnit(mb_au16data, 811, type::Coil),
            mb_master_hysteresis_toggle = MBUnit(mb_au16data, 812, type::Coil),
-           mb_master_water_saving_monitor = MBUnit(mb_au16data, 813, type::Coil),
-           mb_master_hysteresis_monitor = MBUnit(mb_au16data, 814, type::Coil),
            mb_master_cancel = MBUnit(mb_au16data, 815, type::Coil),
            
+           mb_master_water_saving_monitor = MBUnit(mb_au16data, 813, type::Coil),
+           mb_master_hysteresis_monitor = MBUnit(mb_au16data, 814, type::Coil),
+
            mb_master_accept = MBUnit(mb_au16data, 816, type::Coil),
            mb_master_full_hard_reset = MBUnit(mb_au16data, 817, type::Coil),
            mb_comm_self_pasteur_start = MBUnit(mb_au16data, 818, type::Coil),
            mb_comm_solo_heating_toggle = MBUnit(mb_au16data, 819, type::Coil),
-           mb_comm_solo_freezing_toggle = MBUnit(mb_au16data, 820, type::Coil);
+           mb_comm_solo_freezing_toggle = MBUnit(mb_au16data, 820, type::Coil),
+           mb_comm_blowgun_run_btn = MBUnit(mb_au16data, 821, type::Coil);
 
     void init();
     void poll();

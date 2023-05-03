@@ -47,9 +47,9 @@ public:
         this->day = day;
     }
 
-    bool inRange(uint8_t compMinutes, RTCObject &compare)
+    bool inRange(uint8_t compMinutes, RTCObject &compare, bool is_sec_not_min = false)
     {
-        if (!isRelative && compare.day != day || compare.month != month || compare.year != year)
+        if (!isRelative() && (compare.day != day || compare.month != month || compare.year != year))
             return false;
         
         uint32_t currSec = ((hour * 60) + minute) * 60 + second;
@@ -59,7 +59,7 @@ public:
             return false;
         else
         {
-            uint32_t duration = (compSec - currSec) / 60;
+            uint32_t duration = is_sec_not_min ? (compSec - currSec) : (compSec - currSec) / 60;
             if (duration < compMinutes)
                 return true;
             else
@@ -80,8 +80,8 @@ public:
             return false;
     }
 
-    bool outRange(uint8_t compMinutes, RTCObject &compare) {
-        return !inRange(compMinutes, compare);
+    bool outRange(uint8_t compMinutes, RTCObject &compare, bool is_sec_not_min = false) {
+        return !inRange(compMinutes, compare, is_sec_not_min);
     }
 
     bool outRangeOnce(uint8_t compMinutes, RTCObject &compare)
