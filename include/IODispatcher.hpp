@@ -59,7 +59,7 @@ public:
            io_water_jacket_s = IOUnit(WJACKET_SENSOR_PIN, mode::DigitalIN),
            io_stop_btn_s = IOUnit(STOPBTN_PIN, mode::DigitalIN),
            io_mixer_crash_s = IOUnit(MIXER_CRASH_SIGNAL_PIN, mode::DigitalIN),
-           io_v380_s = IOUnit(V380_SENSOR_PIN, mode::DigitalIN),
+           io_v380_s = IOUnit(V380_SENSOR_PIN, mode::DigitalIN, false),
            io_blowgun_s = IOUnit(BLOWGUN_SENSOR, mode::DigitalIN),
            io_battery_s = IOUnit(BATTERY_CHARGE_PIN, mode::AnalogIN),
            io_liquid_temp_s = IOUnit(LIQUID_TEMPC_PIN, mode::AnalogIN);

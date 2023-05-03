@@ -14,6 +14,7 @@
 #define SCR_MASTER_PAGE_TIME 3
 #define SCR_BLOWING_PAGE 4
 #define SCR_USER_MENU 5
+#define SCR_MASTER_SETTINGS 11
 #define SCR_ERROR_NOTIFY 12
 #define PASTEUR_AWAIT_LIMIT_MM 60
 #define BLOWGUN_PRESET_WASHING 3
@@ -102,6 +103,15 @@ private:
     int16_t liquid_tempC = 0;
     uint16_t batt_chargeV = 0;
 
+    //master
+    uint8_t *master_password = new uint8_t[6] { 0 };
+    bool water_saving_on = false;
+    bool hysteresis_is_on = false;
+    uint8_t hysteresis_tempC = 0;
+    uint8_t adc_20ma_positive_limit = 0;
+    uint8_t adc_4ma_negative_limit = 0;
+    uint8_t pumb_perform_litres_min = 0;
+
     STM32RTC& rtc = STM32RTC::getInstance();
     
     void blowingSelectPreset(uint8_t preset_id);
@@ -135,6 +145,7 @@ public:
     void checkAutoStartup();
     void mainThread();
     void displayState();
+    void readPassword(uint8_t number = 0);
 };
 
 #endif

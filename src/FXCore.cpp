@@ -18,9 +18,9 @@ void FXCore::init()
     mb_comm_blow_vInc.addTrigger([this]() -> void { blowingResetVolume(true); });
     mb_comm_blow_vDec.addTrigger([this]() -> void { blowingResetVolume(false); });
     mb_comm_blow_prescaler.addTrigger([this]() -> void { blowingChangePrescaler(); });
-    mb_comm_pass_7.addTrigger([this]() -> void {  });
-    mb_comm_pass_8.addTrigger([this]() -> void {  });
-    mb_comm_pass_9.addTrigger([this]() -> void {  });
+    mb_comm_pass_7.addTrigger([this]() -> void { readPassword(7); });
+    mb_comm_pass_8.addTrigger([this]() -> void { readPassword(8); });
+    mb_comm_pass_9.addTrigger([this]() -> void { readPassword(9); });
     mb_comm_solo_tempC_cancel.addTrigger([this]() -> void {
         mb_solo_heating_tempC.writeValue((uint16_t)ee_solo_heating_tempC.readEE());
         mb_solo_freezing_tempC.writeValue((uint16_t)ee_solo_freezing_tempC.readEE());
@@ -87,11 +87,32 @@ void FXCore::init()
         );
         autoPasteurSelectPreset(pasteur_preset_selected);
     });
-    mb_master_water_saving_toggle.addTrigger([this]() -> void {  });
-    mb_master_hysteresis_toggle.addTrigger([this]() -> void {  });
-    mb_master_cancel.addTrigger([this]() -> void {  });
-    mb_master_accept.addTrigger([this]() -> void {  });
+    /*
+    mb_master_water_saving_toggle.addTrigger([this]() -> void {
+        water_saving_on = !water_saving_on;
+        ee_master_water_saving.writeEE(water_saving_on);
+        mb_master_water_saving_toggle.writeValue((uint16_t)water_saving_on);
+    });
+    mb_master_hysteresis_toggle.addTrigger([this]() -> void {
+        hysteresis_is_on = !hysteresis_is_on;
+        ee_master_hysteresis_toggle.writeEE(hysteresis_is_on);
+        mb_master_hysteresis_toggle.writeValue((uint16_t)hysteresis_is_on);
+    });
+    mb_master_cancel.addTrigger([this]() -> void {
+        mb_hysteresis.writeValue((uint16_t)hysteresis_tempC);
+        mb_20ma_adc_limit.writeValue((uint16_t)adc_20ma_positive_limit);
+        mb_4ma_adc_limit.writeValue((uint16_t)adc_4ma_negative_limit);
+        mb_blowing_performance_lm.writeValue((uint16_t)pumb_perform_litres_min);
+    });
+    mb_master_accept.addTrigger([this]() -> void {
+        ee_master_hysteresis_value.writeEE(hysteresis_tempC = mb_hysteresis.readValue());
+        ee_master_20ma_adc_value.writeEE(adc_20ma_positive_limit = mb_20ma_adc_limit.readValue());
+        ee_master_4ma_adc_value.writeEE(adc_4ma_negative_limit = mb_4ma_adc_limit.readValue());
+        ee_master_pump_perf_lm.writeEE(pumb_perform_litres_min = mb_blowing_performance_lm.readValue());        
+    });
     mb_master_full_hard_reset.addTrigger([this]() -> void {  });
+    */
+
     mb_comm_self_pasteur_start.addTrigger([this]() -> void { pasteurStart(true); });
     mb_comm_solo_heating_toggle.addTrigger([this]() -> void { heaterToggle(!is_solo_heating); });
     mb_comm_solo_freezing_toggle.addTrigger([this]() -> void { freezingToggle(!is_solo_freezing); });
@@ -240,6 +261,16 @@ void FXCore::loadFromEE()
         pasteur_preset_is_runned_today[index] = ee_auto_is_runned_today_arr[index]->readEE();
         pasteur_rtc_triggers[index].setTime(pasteur_preset_run_on_hh[index], pasteur_preset_run_on_mm[index], 0, 0, 0, 0);
     }
+
+    //master
+        water_saving_on = ee_master_water_saving.readEE();
+        mb_master_water_saving_toggle.writeValue((uint16_t)water_saving_on);
+        hysteresis_is_on = ee_master_hysteresis_toggle.readEE();
+        mb_master_hysteresis_toggle.writeValue((uint16_t)hysteresis_is_on);
+        mb_hysteresis.writeValue((uint16_t)(hysteresis_tempC = ee_master_hysteresis_value.readEE()));
+        mb_20ma_adc_limit.writeValue((uint16_t)(adc_20ma_positive_limit = ee_master_20ma_adc_value.readEE()));
+        mb_4ma_adc_limit.writeValue((uint16_t)(adc_4ma_negative_limit = ee_master_4ma_adc_value.readEE()));
+        mb_blowing_performance_lm.writeValue((uint16_t)(pumb_perform_litres_min = ee_master_pump_perf_lm.readEE()));
 }
 
 bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index)
@@ -683,6 +714,24 @@ void FXCore::displayState()
 
         if (!rtc_pasteur_finished.inRange(20, rtc_current_time))
             is_pasteur_part_finished = false;
+    }
+}
+
+void FXCore::readPassword(uint8_t number)
+{
+    for(uint8_t index = 5; index > 0; index--)
+        master_password[index] = master_password[index - 1];
+    master_password[0] = number;
+
+    if (master_password[0] == 7 &&
+        master_password[1] == 8 &&
+        master_password[2] == 9 &&
+        master_password[3] == 8 &&
+        master_password[4] == 9 &&
+        master_password[5] == 7)
+    {
+        mb_set_op320_scr.writeValue((uint16_t)11);
+        master_password[0] = 0;
     }
 }
 
