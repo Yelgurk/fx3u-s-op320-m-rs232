@@ -1,6 +1,6 @@
 #include "MBUnit.hpp"
 
-MBUnit::MBUnit(uint16_t (&mb_array)[9], uint8_t op320_index, type value_type)
+MBUnit::MBUnit(uint16_t (&mb_array)[MB_UNIT_BUFF_SIZE], uint16_t op320_index, type value_type)
 {
     this->op320_index = op320_index;
     this->value_type = value_type;
@@ -12,6 +12,12 @@ MBUnit::MBUnit(uint16_t (&mb_array)[9], uint8_t op320_index, type value_type)
         this->array_unit_ptr = &mb_array[op320_index / 16];
         this->buff_bit = op320_index % 16;
     }
+}
+
+void MBUnit::addTrigger(CallbackFunction triggerFunc)
+{
+    this->triggerFunc = triggerFunc;
+    this->is_trigger_func = true;
 }
 
 bool MBUnit::writeValue(uint16_t value)
@@ -48,4 +54,16 @@ uint16_t MBUnit::readValue()
         return *array_unit_ptr;
     else
         return bitRead(*array_unit_ptr, buff_bit);
+}
+
+bool MBUnit::triggerFired()
+{
+    if (value_type == type::Coil && is_trigger_func && bitRead(*array_unit_ptr, buff_bit) == 1)
+    {
+        bitWrite(*array_unit_ptr, buff_bit, 0);
+        triggerFunc();
+        return true;
+    }
+
+    return false;
 }

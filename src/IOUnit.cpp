@@ -1,17 +1,14 @@
 #include "IOUnit.hpp"
 
-IOUnit::IOUnit(uint8_t stm_pin, mode pin_mode)
+IOUnit::IOUnit(uint8_t stm_pin, mode pin_mode, bool is_reverse)
 {
     this->stm_pin = stm_pin;
     this->pin_mode = pin_mode;
+    this->is_reverse = is_reverse;
 }
 
 bool IOUnit::init()
 {
-    Serial.print(stm_pin);
-    Serial.print(", ");
-    Serial.println((uint8_t)pin_mode);
-
     if (pin_mode == mode::None)
         return false;
 
@@ -35,12 +32,20 @@ bool IOUnit::write(bool value)
     return true;
 }
 
-uint32_t IOUnit::read()
+bool IOUnit::readDigital()
+{
+    if (pin_mode == mode::DigitalIN || pin_mode == mode::Relay)
+        return is_reverse ? !digitalRead(stm_pin) : digitalRead(stm_pin);
+
+    return false;
+}
+
+uint16_t IOUnit::readAnalog()
 {
     if (pin_mode == mode::AnalogIN)
         return analogRead(stm_pin);
-    else
-        return digitalRead(stm_pin) == HIGH ? 1 : 0;
+    
+    return 0;
 }
 
 bool IOUnit::isAnalog() {

@@ -5,11 +5,11 @@
 #define _eeprom_hpp
 
 #define EE_I2C_ARRD 0x50
-#define EE_BYTE_SIZE 8192
-#define EE_SECTOR_START_ADDR 0x0001
-#define EE_SECTOR_SIZE 2
+#define EE_FULL_BSIZE 8192
+#define EE_SECTOR_START_ADDR 0x0050
+#define EE_SECTOR_SIZE 3
 #define EE_COUNTER_SIZE 4
-#define EE_CYCLE_LIMIT 100 //100000
+#define EE_CYCLE_LIMIT 100000
 
 class EEPROM
 {

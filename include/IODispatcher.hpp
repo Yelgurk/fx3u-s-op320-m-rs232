@@ -44,25 +44,25 @@
 #define BATTERY_CHARGE_PIN      AD0
 #define LIQUID_TEMPC_PIN        AD3
 
-const uint8_t c_io_array_size = 11;
+#define IO_COUNT 11
 
 class IODispatcher
 {
 private:
-    IOUnit *io_array;
+    IOUnit **io_array;
 
-protected:
-    IOUnit heater_r = IOUnit(HEATER_PIN, mode::Relay),
-           mixer_r = IOUnit(MIXER_PIN, mode::Relay),
-           water_jacket_r = IOUnit(WJACKET_VALVE_PIN, mode::Relay),
-           blowgun_r = IOUnit(BLOWGUN_PUMP_PIN, mode::Relay),
-           water_jacket_s = IOUnit(WJACKET_SENSOR_PIN, mode::DigitalIN),
-           stop_btn_s = IOUnit(STOPBTN_PIN, mode::DigitalIN),
-           mixer_crash_s = IOUnit(MIXER_CRASH_SIGNAL_PIN, mode::DigitalIN),
-           v380_s = IOUnit(V380_SENSOR_PIN, mode::DigitalIN),
-           blowgun_s = IOUnit(BLOWGUN_SENSOR, mode::DigitalIN),
-           battery_s = IOUnit(BATTERY_CHARGE_PIN, mode::AnalogIN),
-           liquid_temp_s = IOUnit(LIQUID_TEMPC_PIN, mode::AnalogIN);
+public:
+    IOUnit io_heater_r = IOUnit(HEATER_PIN, mode::Relay, false),
+           io_mixer_r = IOUnit(MIXER_PIN, mode::Relay, false),
+           io_water_jacket_r = IOUnit(WJACKET_VALVE_PIN, mode::Relay, false),
+           io_blowgun_r = IOUnit(BLOWGUN_PUMP_PIN, mode::Relay, false),
+           io_water_jacket_s = IOUnit(WJACKET_SENSOR_PIN, mode::DigitalIN),
+           io_stop_btn_s = IOUnit(STOPBTN_PIN, mode::DigitalIN),
+           io_mixer_crash_s = IOUnit(MIXER_CRASH_SIGNAL_PIN, mode::DigitalIN),
+           io_v380_s = IOUnit(V380_SENSOR_PIN, mode::DigitalIN),
+           io_blowgun_s = IOUnit(BLOWGUN_SENSOR, mode::DigitalIN),
+           io_battery_s = IOUnit(BATTERY_CHARGE_PIN, mode::AnalogIN),
+           io_liquid_temp_s = IOUnit(LIQUID_TEMPC_PIN, mode::AnalogIN);
 
     bool init();
     void relaysOff();
