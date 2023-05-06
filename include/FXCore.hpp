@@ -105,12 +105,12 @@ private:
 
     //master
     uint8_t *master_password = new uint8_t[6] { 0 };
-    bool water_saving_on = false;
-    bool hysteresis_is_on = false;
-    uint8_t hysteresis_tempC = 0;
-    uint8_t adc_20ma_positive_limit = 0;
-    uint8_t adc_4ma_negative_limit = 0;
-    uint8_t pumb_perform_litres_min = 0;
+    bool* water_saving_on = new bool;
+    bool* hysteresis_is_on = new bool;
+    uint8_t* hysteresis_tempC = new uint8_t;
+    uint8_t* adc_20ma_positive_limit = new uint8_t;
+    uint8_t* adc_4ma_negative_limit = new uint8_t;
+    uint8_t* pumb_perform_litres_min = new uint8_t;
 
     STM32RTC& rtc = STM32RTC::getInstance();
     

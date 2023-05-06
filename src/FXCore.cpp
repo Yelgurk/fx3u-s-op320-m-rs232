@@ -87,31 +87,30 @@ void FXCore::init()
         );
         autoPasteurSelectPreset(pasteur_preset_selected);
     });
-    /*
     mb_master_water_saving_toggle.addTrigger([this]() -> void {
-        water_saving_on = !water_saving_on;
-        ee_master_water_saving.writeEE(water_saving_on);
-        mb_master_water_saving_toggle.writeValue((uint16_t)water_saving_on);
+        *water_saving_on = !*water_saving_on;
+        ee_master_water_saving.writeEE(*water_saving_on);
+        mb_master_water_saving_monitor.writeValue((uint16_t)*water_saving_on);
     });
     mb_master_hysteresis_toggle.addTrigger([this]() -> void {
-        hysteresis_is_on = !hysteresis_is_on;
-        ee_master_hysteresis_toggle.writeEE(hysteresis_is_on);
-        mb_master_hysteresis_toggle.writeValue((uint16_t)hysteresis_is_on);
+        *hysteresis_is_on = !*hysteresis_is_on;
+        ee_master_hysteresis_toggle.writeEE(*hysteresis_is_on);
+        mb_master_hysteresis_monitor.writeValue((uint16_t)*hysteresis_is_on);
     });
     mb_master_cancel.addTrigger([this]() -> void {
-        mb_hysteresis.writeValue((uint16_t)hysteresis_tempC);
-        mb_20ma_adc_limit.writeValue((uint16_t)adc_20ma_positive_limit);
-        mb_4ma_adc_limit.writeValue((uint16_t)adc_4ma_negative_limit);
-        mb_blowing_performance_lm.writeValue((uint16_t)pumb_perform_litres_min);
+        mb_hysteresis.writeValue((uint16_t)*hysteresis_tempC);
+        mb_20ma_adc_limit.writeValue((uint16_t)*adc_20ma_positive_limit);
+        mb_4ma_adc_limit.writeValue((uint16_t)*adc_4ma_negative_limit);
+        mb_blowing_performance_lm.writeValue((uint16_t)*pumb_perform_litres_min);
+        mb_set_op320_scr.writeValue((uint16_t)SCR_USER_MENU);
     });
     mb_master_accept.addTrigger([this]() -> void {
-        ee_master_hysteresis_value.writeEE(hysteresis_tempC = mb_hysteresis.readValue());
-        ee_master_20ma_adc_value.writeEE(adc_20ma_positive_limit = mb_20ma_adc_limit.readValue());
-        ee_master_4ma_adc_value.writeEE(adc_4ma_negative_limit = mb_4ma_adc_limit.readValue());
-        ee_master_pump_perf_lm.writeEE(pumb_perform_litres_min = mb_blowing_performance_lm.readValue());        
+        ee_master_hysteresis_value.writeEE(*hysteresis_tempC = mb_hysteresis.readValue());
+        ee_master_20ma_adc_value.writeEE(*adc_20ma_positive_limit = mb_20ma_adc_limit.readValue());
+        ee_master_4ma_adc_value.writeEE(*adc_4ma_negative_limit = mb_4ma_adc_limit.readValue());
+        ee_master_pump_perf_lm.writeEE(*pumb_perform_litres_min = mb_blowing_performance_lm.readValue());        
     });
     mb_master_full_hard_reset.addTrigger([this]() -> void {  });
-    */
 
     mb_comm_self_pasteur_start.addTrigger([this]() -> void { pasteurStart(true); });
     mb_comm_solo_heating_toggle.addTrigger([this]() -> void { heaterToggle(!is_solo_heating); });
@@ -263,14 +262,16 @@ void FXCore::loadFromEE()
     }
 
     //master
-        water_saving_on = ee_master_water_saving.readEE();
-        mb_master_water_saving_toggle.writeValue((uint16_t)water_saving_on);
-        hysteresis_is_on = ee_master_hysteresis_toggle.readEE();
-        mb_master_hysteresis_toggle.writeValue((uint16_t)hysteresis_is_on);
-        mb_hysteresis.writeValue((uint16_t)(hysteresis_tempC = ee_master_hysteresis_value.readEE()));
-        mb_20ma_adc_limit.writeValue((uint16_t)(adc_20ma_positive_limit = ee_master_20ma_adc_value.readEE()));
-        mb_4ma_adc_limit.writeValue((uint16_t)(adc_4ma_negative_limit = ee_master_4ma_adc_value.readEE()));
-        mb_blowing_performance_lm.writeValue((uint16_t)(pumb_perform_litres_min = ee_master_pump_perf_lm.readEE()));
+        *water_saving_on = ee_master_water_saving.readEE();
+        mb_master_water_saving_toggle.writeValue((uint16_t)*water_saving_on);
+        mb_master_water_saving_monitor.writeValue((uint16_t)*water_saving_on);
+        *hysteresis_is_on = ee_master_hysteresis_toggle.readEE();
+        mb_master_hysteresis_toggle.writeValue((uint16_t)*hysteresis_is_on);
+        mb_master_hysteresis_monitor.writeValue((uint16_t)*hysteresis_is_on);
+        mb_hysteresis.writeValue((uint16_t)(*hysteresis_tempC = ee_master_hysteresis_value.readEE()));
+        mb_20ma_adc_limit.writeValue((uint16_t)(*adc_20ma_positive_limit = ee_master_20ma_adc_value.readEE()));
+        mb_4ma_adc_limit.writeValue((uint16_t)(*adc_4ma_negative_limit = ee_master_4ma_adc_value.readEE()));
+        mb_blowing_performance_lm.writeValue((uint16_t)(*pumb_perform_litres_min = ee_master_pump_perf_lm.readEE()));
 }
 
 bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index)
@@ -623,14 +624,12 @@ void FXCore::checkAutoStartup()
 
 void FXCore::mainThread()
 {
-    /*
     if (is_blowgun_call &&
         !is_pasteur_proc_running &&
         !is_stop_btn_pressed &&
         !is_connected_380V &&
         mb_get_op320_scr.readValue() == SCR_BLOWING_PAGE)
         blowgunStart();
-        */
     
     if (is_stop_btn_pressed)
         stopAllFunc();
