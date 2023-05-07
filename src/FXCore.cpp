@@ -289,28 +289,55 @@ bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index)
     is_heating_part_finished = false;
     is_waterJ_filled_yet = false;
 
+    ee_proc_pasteur_running.writeEE(1);
+    ee_proc_pasteur_paused.writeEE(0);
+    ee_proc_pasteur_part_finished.writeEE(0);
+    ee_proc_need_in_freezing.writeEE(0);
+    ee_proc_need_in_heating.writeEE(0);
+    ee_proc_waterJacket_filled_yet.writeEE(0);
+
     if (is_user_call)
     {
         is_pasteur_need_in_freezing = settings_self_pasteur_mode >= 1 ? true : false;
         is_pasteur_need_in_heating = settings_self_pasteur_mode >= 2 ? true : false;
+        ee_proc_need_in_freezing.writeEE(settings_self_pasteur_mode >= 1 ? 1 : 0);
+        ee_proc_need_in_heating.writeEE(settings_self_pasteur_mode >= 2 ? 1 : 0);
+
         pasteur_proc_time_span_mm = settings_self_pasteur_durat;
         pasteur_proc_pasteur_tempC = settings_self_pasteur_tempC;
         pasteur_proc_heeting_tempC = settings_self_heating_tempC;
         pasteur_proc_freezing_tempC = settings_self_freezing_tempC;
+        ee_proc_time_span.writeEE(pasteur_proc_time_span_mm);
+        ee_proc_pasteur_tempC.writeEE(pasteur_proc_pasteur_tempC);
+        ee_proc_freezing_tempC.writeEE(pasteur_proc_heeting_tempC);
+        ee_proc_heating_tempC.writeEE(pasteur_proc_freezing_tempC);
+
         pasteur_preset_runned = 0;
     }
     else
     {
         is_pasteur_need_in_freezing = true;
         is_pasteur_need_in_heating = true;
-        pasteur_proc_time_span_mm = pasteur_preset_pasteur_tempC[preset_index];
+        ee_proc_need_in_freezing.writeEE(1);
+        ee_proc_need_in_heating.writeEE(1);
+
+        pasteur_proc_time_span_mm = pasteur_preset_durat_mm[preset_index];
         pasteur_proc_pasteur_tempC = pasteur_preset_pasteur_tempC[preset_index];
-        pasteur_proc_heeting_tempC = pasteur_preset_pasteur_tempC[preset_index];
-        pasteur_proc_freezing_tempC = pasteur_preset_pasteur_tempC[preset_index];
+        pasteur_proc_heeting_tempC = pasteur_preset_heating_tempC[preset_index];
+        pasteur_proc_freezing_tempC = pasteur_preset_freezing_tempC[preset_index];
+        ee_proc_time_span.writeEE(pasteur_preset_durat_mm[preset_index]);
+        ee_proc_pasteur_tempC.writeEE(pasteur_preset_pasteur_tempC[preset_index]);
+        ee_proc_freezing_tempC.writeEE(pasteur_preset_heating_tempC[preset_index]);
+        ee_proc_heating_tempC.writeEE(pasteur_preset_freezing_tempC[preset_index]);
+
         pasteur_preset_runned = preset_index + 1;
         ee_auto_is_runned_today_arr[preset_index]->writeEE(pasteur_preset_is_runned_today[preset_index] = 1);
     }
+    ee_proc_preset_runned_index.writeEE(pasteur_preset_runned);
+
     rtc_pasteur_started.setInstTime();
+    ee_proc_started_hh.writeEE(rtc_pasteur_started.hour);
+    ee_proc_started_mm.writeEE(rtc_pasteur_started.minute);
 
     // save to ee rtc of running
 
@@ -404,7 +431,6 @@ void FXCore::blowgunStart()
         {
             is_blowgun_washing_runned = true;
             blowgun_start_washing_time.setInstTime();
-            //blowgun_washing_task->run(blowgun_preset_volume[BLOWGUN_PRESET_WASHING]);
             io_blowgun_r.write(true);
         }
     }
@@ -420,7 +446,6 @@ void FXCore::blowgunFinish(bool forced) {
     if (forced || blowgun_start_washing_time.outRange(blowgun_preset_volume[BLOWGUN_PRESET_WASHING], rtc_current_time, true))
     {
         is_blowgun_washing_runned = false;
-        //blowgun_washing_task->stop();
         io_blowgun_r.write(false);
     }
 }
@@ -647,7 +672,6 @@ void FXCore::mainThread()
         blowgunFinish(false);
 
     displayState();
-    //here alarm check for auto calling pasteur preset
 }
 
 void FXCore::displayState()
