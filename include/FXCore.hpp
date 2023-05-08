@@ -50,6 +50,8 @@ private:
     RTCObject rtc_pasteur_in_proc;
     RTCObject rtc_pasteur_in_await;
     RTCObject rtc_current_time;
+    RTCObject rtc_pasteur_last_point;
+    uint8_t rtc_pasteur_estimated_mm = 0;
     uint8_t pasteur_preset_runned = 0;
 
     // pasteur preset variables

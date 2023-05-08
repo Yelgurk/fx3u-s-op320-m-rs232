@@ -145,6 +145,14 @@ void FXCore::init()
         }
     });
     TaskManager::newTask(10000, [this]() -> void { checkRTC(false); });
+    TaskManager::newTask(10000, [this]() -> void {
+        if (is_pasteur_proc_running)
+        {
+            rtc_pasteur_last_point.setTime(rtc_pasteur_in_proc.hour, rtc_pasteur_in_proc.minute, 0, 0, 0, 0);
+            ee_dynamic_proc_last_point_hh.writeEE(rtc_pasteur_last_point.hour);
+            ee_dynamic_proc_last_point_mm.writeEE(rtc_pasteur_last_point.minute);
+        }
+    });
     TaskManager::newTask(30000, [this]() -> void { readTempCSensor(); });
     blowgun_washing_task = TaskManager::newTask(10, [this]() -> void { blowgunFinish(); }, true);
     blowgun_washing_task->stop();
@@ -262,16 +270,43 @@ void FXCore::loadFromEE()
     }
 
     //master
-        *water_saving_on = ee_master_water_saving.readEE();
-        mb_master_water_saving_toggle.writeValue((uint16_t)*water_saving_on);
-        mb_master_water_saving_monitor.writeValue((uint16_t)*water_saving_on);
-        *hysteresis_is_on = ee_master_hysteresis_toggle.readEE();
-        mb_master_hysteresis_toggle.writeValue((uint16_t)*hysteresis_is_on);
-        mb_master_hysteresis_monitor.writeValue((uint16_t)*hysteresis_is_on);
-        mb_hysteresis.writeValue((uint16_t)(*hysteresis_tempC = ee_master_hysteresis_value.readEE()));
-        mb_20ma_adc_limit.writeValue((uint16_t)(*adc_20ma_positive_limit = ee_master_20ma_adc_value.readEE()));
-        mb_4ma_adc_limit.writeValue((uint16_t)(*adc_4ma_negative_limit = ee_master_4ma_adc_value.readEE()));
-        mb_blowing_performance_lm.writeValue((uint16_t)(*pumb_perform_litres_min = ee_master_pump_perf_lm.readEE()));
+    *water_saving_on = ee_master_water_saving.readEE();
+    mb_master_water_saving_toggle.writeValue((uint16_t)*water_saving_on);
+    mb_master_water_saving_monitor.writeValue((uint16_t)*water_saving_on);
+    *hysteresis_is_on = ee_master_hysteresis_toggle.readEE();
+    mb_master_hysteresis_toggle.writeValue((uint16_t)*hysteresis_is_on);
+    mb_master_hysteresis_monitor.writeValue((uint16_t)*hysteresis_is_on);
+    mb_hysteresis.writeValue((uint16_t)(*hysteresis_tempC = ee_master_hysteresis_value.readEE()));
+    mb_20ma_adc_limit.writeValue((uint16_t)(*adc_20ma_positive_limit = ee_master_20ma_adc_value.readEE()));
+    mb_4ma_adc_limit.writeValue((uint16_t)(*adc_4ma_negative_limit = ee_master_4ma_adc_value.readEE()));
+    mb_blowing_performance_lm.writeValue((uint16_t)(*pumb_perform_litres_min = ee_master_pump_perf_lm.readEE()));
+
+    // pasteur proc recovering
+    is_pasteur_proc_running = ee_proc_pasteur_running.readEE() == 1 ? true : false;
+    is_pasteur_proc_paused = ee_proc_pasteur_paused.readEE() == 1 ? true : false;
+    is_pasteur_part_finished = ee_proc_pasteur_part_finished.readEE() == 1 ? true : false;
+    is_freezing_part_finished = ee_proc_freezing_part_finished.readEE() == 1 ? true : false;
+    is_heating_part_finished = ee_proc_heating_part_finished.readEE() == 1 ? true : false;
+    is_waterJ_filled_yet = ee_proc_waterJacket_filled_yet.readEE() == 1 ? true : false;
+    is_pasteur_need_in_freezing = ee_proc_need_in_freezing.readEE() == 1 ? true : false;
+    is_pasteur_need_in_heating = ee_proc_need_in_heating.readEE() == 1 ? true : false;
+    pasteur_proc_time_span_mm = ee_proc_time_span.readEE();
+    pasteur_proc_pasteur_tempC = ee_proc_pasteur_tempC.readEE();
+    pasteur_proc_heeting_tempC = ee_proc_heating_tempC.readEE();
+    pasteur_proc_freezing_tempC = ee_proc_freezing_tempC.readEE();
+    pasteur_preset_runned = ee_proc_preset_runned_index.readEE();
+    rtc_pasteur_started.setTime(ee_proc_started_hh.readEE(), ee_proc_started_mm.readEE(), 0, 0, 0, 0);
+    rtc_pasteur_estimated_mm = ee_proc_estimated_mm.readEE();
+
+    rtc_pasteur_last_point.setTime(
+        ee_dynamic_proc_last_point_hh.readEE(),
+        ee_dynamic_proc_last_point_mm.readEE(),
+        0, 0, 0, 0
+    );
+
+    uint32_t span_diff = (rtc.getHours() * 60 + rtc.getMinutes()) + pasteur_proc_time_span_mm;
+
+    rtc_pasteur_finish_time.setTime(span_diff / 60, span_diff % 60, 0, 0, 0, 0);
 }
 
 bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index)
@@ -338,8 +373,14 @@ bool FXCore::pasteurStart(bool is_user_call, uint8_t preset_index)
     rtc_pasteur_started.setInstTime();
     ee_proc_started_hh.writeEE(rtc_pasteur_started.hour);
     ee_proc_started_mm.writeEE(rtc_pasteur_started.minute);
+    ee_proc_estimated_mm.writeEE(pasteur_proc_time_span_mm);
 
-    // save to ee rtc of running
+    rtc_pasteur_last_point.setTime(rtc_current_time.hour, rtc_current_time.minute, 0, 0, 0, 0);
+    ee_dynamic_proc_last_point_hh.writeEE(rtc_pasteur_last_point.hour);
+    ee_dynamic_proc_last_point_mm.writeEE(rtc_pasteur_last_point.minute);
+
+    uint32_t finishMin = (rtc_current_time.hour * 60 + rtc_current_time.minute + pasteur_proc_time_span_mm);
+    rtc_pasteur_finish_time.setTime(finishMin / 60, finishMin % 60, 0, 0, 0, 0);
 
     return true;
 }
@@ -350,6 +391,7 @@ void FXCore::pasteurPause(OP320Error to_op320)
     {
         is_pasteur_proc_paused = true;
         rtc_pasteur_paused.setInstTime();
+        ee_proc_pasteur_paused.writeEE(1);
 
         io_heater_r.write(false);
         io_mixer_r.write(false);
@@ -358,8 +400,6 @@ void FXCore::pasteurPause(OP320Error to_op320)
 
         mb_notification_list.writeValue((uint16_t)to_op320);
         mb_set_op320_scr.writeValue((uint16_t)SCR_ERROR_NOTIFY);
-
-        // save to ee rtc of pause + pause error code
     }
 }
 
@@ -368,11 +408,10 @@ void FXCore::pasteurResume()
     if (is_pasteur_proc_running)
     {
         is_pasteur_proc_paused = false;
+        ee_proc_pasteur_paused.writeEE(0);
 
         io_mixer_r.write(true);
         io_water_jacket_r.write(false);
-        
-        // check resume response to pause rtc and finish or save to ee rtc of resume
     }
 }
 
@@ -391,6 +430,8 @@ void FXCore::pasteurFinish(FinishFlag flag)
         mixerToggle(false);
         rtc_pasteur_finished.setInstTime();
 
+        ee_proc_pasteur_running.writeEE(0);
+
         if (flag != FinishFlag::Success && flag != FinishFlag::UserCall)
         {
             OP320Error to_op320;
@@ -403,8 +444,6 @@ void FXCore::pasteurFinish(FinishFlag flag)
             mb_notification_list.writeValue((uint16_t)to_op320);
             mb_set_op320_scr.writeValue((uint16_t)SCR_ERROR_NOTIFY);
         }
-
-        // save to ee rtc of finish + code ok or mixer error
     }
 }
 
@@ -421,8 +460,8 @@ void FXCore::blowgunStart()
         }
 
         io_blowgun_r.write(true);
-        // litres * expected volume / litres in minute of pump
-        delay(60000 * (blowgun_preset_volume[blowgun_preset_selected] * 10) / 38000);
+
+        delay(60000 * (blowgun_preset_volume[blowgun_preset_selected] * 10) / (*pumb_perform_litres_min * 1000));
         blowgunFinish(true);
     }
     else if (blowgun_preset_selected == BLOWGUN_PRESET_WASHING && !is_connected_380V)
@@ -543,6 +582,11 @@ bool FXCore::pasteurTask()
 {
     rtc_pasteur_in_proc.setInstTime();
 
+    mb_proc_start_hh.writeValue((uint16_t)rtc_pasteur_started.hour);
+    mb_proc_start_mm.writeValue((uint16_t)rtc_pasteur_started.minute);
+    mb_proc_end_hh.writeValue((uint16_t)rtc_pasteur_finish_time.hour);
+    mb_proc_end_mm.writeValue((uint16_t)rtc_pasteur_finish_time.minute);
+
     if (!is_pasteur_part_finished)
     {
         if (is_mixer_error)
@@ -559,6 +603,12 @@ bool FXCore::pasteurTask()
                 pasteurFinish(!is_connected_380V ? FinishFlag::Power380vError : FinishFlag::WaterJacketError);
                 return false;
             }
+        }
+
+        if (rtc_pasteur_last_point.outRange(PASTEUR_AWAIT_LIMIT_MM, rtc_pasteur_in_proc))
+        {
+            pasteurFinish(FinishFlag::Power380vError);
+            return false;
         }
 
         if ((!is_connected_380V || (is_waterJ_filled_yet ? !is_water_in_jacket : false)) && !is_pasteur_proc_paused)
@@ -588,8 +638,17 @@ bool FXCore::pasteurTask()
         heatersPID(pasteur_proc_pasteur_tempC);
         mixerToggle(true);
 
-        if (!rtc_pasteur_started.inRange(pasteur_proc_time_span_mm, rtc_pasteur_in_proc))
-            is_pasteur_part_finished = true;
+        uint32_t span_diff =
+            (rtc_pasteur_in_proc.hour * 60 + rtc_pasteur_in_proc.minute) -
+            (rtc_pasteur_finish_time.hour * 60 + rtc_pasteur_finish_time.minute);
+        if (span_diff != pasteur_proc_time_span_mm)
+        {
+            pasteur_proc_time_span_mm = span_diff + 1;
+            ee_proc_time_span.writeEE(pasteur_proc_time_span_mm);
+        }
+
+        if (rtc_pasteur_in_proc.outRange(pasteur_proc_time_span_mm, rtc_pasteur_finish_time))
+            is_pasteur_part_finished = true;    
     }
 
     if (is_pasteur_need_in_freezing ? !is_freezing_part_finished : false)
@@ -736,7 +795,10 @@ void FXCore::displayState()
         mb_step_index_list.writeValue((uint16_t)OP320Step::PasteurFinish);
 
         if (!rtc_pasteur_finished.inRange(20, rtc_current_time))
+        {
             is_pasteur_part_finished = false;
+            ee_proc_pasteur_part_finished.writeEE(0);
+        }
     }
 }
 
@@ -865,7 +927,9 @@ void FXCore::readSensors()
     is_blowgun_call = is_blowgun_call ? true : io_blowgun_s.readDigital();
     is_mixer_error = io_mixer_crash_s.readDigital();
 
-    mb_batt_charge.writeValue(batt_chargeV = io_battery_s.readAnalog() / 40.95);
+    batt_chargeV = io_battery_s.readAnalog() / (4095 / 100);
+
+    mb_batt_charge.writeValue((uint16_t)batt_chargeV);
     mb_liq_tempC.writeValue((uint16_t)liquid_tempC);
     
     is_connected_380V = io_v380_s.readDigital();
@@ -874,6 +938,9 @@ void FXCore::readSensors()
 
 void FXCore::readTempCSensor()
 {
-    liquid_tempC = io_liquid_temp_s.readAnalog() / 20.475 - 50;
+    liquid_tempC = io_liquid_temp_s.readAnalog() /
+        (4095 / (*adc_20ma_positive_limit + *adc_4ma_negative_limit)) -
+        *adc_4ma_negative_limit;
+
     is_heaters_available = true;
 }

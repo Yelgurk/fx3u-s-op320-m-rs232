@@ -60,7 +60,7 @@ public:
         else
         {
             uint32_t duration = is_sec_not_min ? (compSec - currSec) : (compSec - currSec) / 60;
-            if (duration < compMinutes)
+            if (duration <= compMinutes)
                 return true;
             else
                 return false;
@@ -93,6 +93,14 @@ public:
                 successComparedToday = true;
             return response;
         }
+    }
+
+    uint8_t getDiffMM(RTCObject &compare)
+    {
+        uint32_t currSec = ((hour * 60) + minute) * 60 + second;
+        uint32_t compSec = ((compare.hour * 60) + compare.minute) * 60 + compare.second;
+        
+        return (currSec - compSec) / 60;
     }
 };
 
