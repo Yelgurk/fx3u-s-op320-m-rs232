@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "EEPROM.hpp"
 
-#ifndef _eeunit_hpp
-#define _eeunit_hpp
+#ifndef EEUnit_hpp
+#define EEUnit_hpp
 
 class EEUnit
 {

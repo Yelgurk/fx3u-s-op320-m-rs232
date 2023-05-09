@@ -2,8 +2,8 @@
 #include "EEUnit.hpp"
 #include "EEPROM.hpp"
 
-#ifndef _eedispatcher_hpp
-#define _eedispatcher_hpp
+#ifndef EEDispatcher_hpp
+#define EEDispatcher_hpp
 
 #define BLOWGUN_PRESET_CNT 4
 #define PASTEUR_PRESET_CNT 3
@@ -38,7 +38,7 @@ public:
            ee_self_heating_tempC = EEUnit(0x000B, &ee24c64, false),
            ee_self_freezing_tempC = EEUnit(0x000C, &ee24c64, false),
            ee_self_pasteur_durat = EEUnit(0x000D, &ee24c64, false),
-           ee_self_psteur_mode = EEUnit(0x000E, &ee24c64, false),
+           ee_self_pasteur_mode = EEUnit(0x000E, &ee24c64, false),
            ee_auto1_pasteur_tempC = EEUnit(0x000F, &ee24c64, false),
            ee_auto2_pasteur_tempC = EEUnit(0x0010, &ee24c64, false),
            ee_auto3_pasteur_tempC = EEUnit(0x0011, &ee24c64, false),

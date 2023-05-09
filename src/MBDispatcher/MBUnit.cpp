@@ -49,11 +49,15 @@ bool MBUnit::writeValue(bool value)
 uint16_t MBUnit::readValue()
 {
     if (value_type == type::None)
-        return -1;
+        return 0;
     else if (value_type == type::Uint16)
         return *array_unit_ptr;
     else
         return bitRead(*array_unit_ptr, buff_bit);
+}
+
+void MBUnit::readValue(uint8_t* var) {
+    var = readValue();
 }
 
 bool MBUnit::triggerFired()

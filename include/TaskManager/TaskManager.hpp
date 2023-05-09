@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "TMUnit.hpp"
 
-#ifndef _taskmanager_hpp
-#define _taskmanager_hpp
+#ifndef TaskManager_hpp
+#define TaskManager_hpp
 
 //template <typename interruptFunc>
 

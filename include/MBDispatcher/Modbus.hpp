@@ -1,8 +1,8 @@
 #include <inttypes.h>
 #include <Arduino.h>
 
-#ifndef _modbus_hpp
-#define _modbus_hpp
+#ifndef Modbus_hpp
+#define Modbus_hpp
 
 typedef struct
 {

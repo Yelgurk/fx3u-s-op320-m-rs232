@@ -1,4 +1,4 @@
-#include "EEDispatcher.hpp"
+#include "../include/EEDispatcher/EEDispatcher.hpp"
 
 bool EEDispatcher::init()
 {

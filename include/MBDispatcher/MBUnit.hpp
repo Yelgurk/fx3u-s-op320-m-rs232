@@ -1,7 +1,7 @@
 #include "Arduino.h"
 
-#ifndef _mbunit_hpp
-#define _mbunit_hpp
+#ifndef MBUnit_hpp
+#define MBUnit_hpp
 
 #define MB_UNIT_BUFF_MAIN 52
 #define MB_UNIT_OP_COMM 3
@@ -28,6 +28,7 @@ public:
     bool writeValue(uint16_t value);
     bool writeValue(bool value);
     uint16_t readValue();
+    void readValue(uint8_t* var);
     bool triggerFired();
 };
 

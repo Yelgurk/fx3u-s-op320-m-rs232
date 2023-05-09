@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "SlowSoftI2CMaster.h"
 
-#ifndef _eeprom_hpp
-#define _eeprom_hpp
+#ifndef EEPROM_hpp
+#define EEPROM_hpp
 
 #define EE_I2C_ARRD 0x50
 #define EE_FULL_BSIZE 8192

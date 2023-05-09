@@ -1,7 +1,7 @@
 #include "IOUnit.hpp"
 
-#ifndef _iodispatcher_hpp
-#define _iodispatcher_hpp
+#ifndef IODispatcher_hpp
+#define IODispatcher_hpp
 
 /* Relay */
 #define Y00 PC9

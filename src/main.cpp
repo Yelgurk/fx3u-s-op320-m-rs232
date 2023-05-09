@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "FXCore.hpp"
+#include "./Core/FXCore.hpp"
 
 FXCore fx_core;
 
@@ -11,10 +11,10 @@ void setup()
 
     analogReadResolution(12);
 
-    fx_core.FXCore::init();
+    //fx_core.FXCore::init();
 }
 
 void loop()
 {
-    fx_core.dispatcher();
+    //fx_core.dispatcher();
 }

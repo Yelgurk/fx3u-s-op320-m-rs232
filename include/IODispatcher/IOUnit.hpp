@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
-#ifndef _iounit_hpp
-#define _iounit_hpp
+#ifndef IOUnit_hpp
+#define IOUnit_hpp
 
 enum class mode { None, Relay, DigitalIN, AnalogIN };
 

@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
-#ifndef _tmunit_hpp
-#define _tmunit_hpp
+#ifndef TMUnit_hpp
+#define TMUnit_hpp
 
 typedef std::function<void()> CallbackFunction;
 
