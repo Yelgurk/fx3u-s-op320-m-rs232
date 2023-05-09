@@ -1,4 +1,4 @@
-#include "EEUnit.hpp"
+#include "../include/EEDispatcher/EEUnit.hpp"
 
 EEUnit::EEUnit(uint16_t main_ee_addr, EEPROM *ee24c64, bool is_tracable, uint16_t *ee_sector_addr)
 {

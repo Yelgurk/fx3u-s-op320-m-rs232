@@ -41,6 +41,7 @@ public:
     void setYear(uint8_t years);
     void setMonth(uint8_t months);
     void setDay(uint8_t days);
+    void addMinutes(uint8_t minutes);
     void sendToEE(bool static_flag = true);
     void sendToMB();
     void loadFromEE();

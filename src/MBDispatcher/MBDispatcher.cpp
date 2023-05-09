@@ -1,13 +1,9 @@
-#include "MBDispatcher.hpp"
+#include "../include/MBDispatcher/MBDispatcher.hpp"
 
 void MBDispatcher::init()
 {
     mb_comm_arr = new MBUnit*[COMM_COUNT] {
         &mb_comm_stop_proc,
-        &mb_comm_blow_preset_1,
-        &mb_comm_blow_preset_2,
-        &mb_comm_blow_preset_3,
-        &mb_comm_blow_preset_4,
         &mb_comm_blow_preset_1,
         &mb_comm_blow_preset_2,
         &mb_comm_blow_preset_3,
@@ -66,8 +62,6 @@ void MBDispatcher::poll_error() { }
 void MBDispatcher::commCheck()
 {
     for (uint8_t index = 0; index < COMM_COUNT; index++)
-    {
-        if (index < 1 || index > 4)
-            mb_comm_arr[index]->triggerFired();
-    }
+        mb_comm_arr[index]->triggerFired();
+
 }

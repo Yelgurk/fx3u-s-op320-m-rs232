@@ -33,6 +33,7 @@ void TimeUnit::setMBPointer(MBUnit* pointer, PointerType type)
 void TimeUnit::clone(TimeObj parent)
 {
     this->TimeObj::clone(parent);
+    sendToMB();
     sendToEE(into_ee_after_edit);
 }
 
@@ -110,6 +111,13 @@ void TimeUnit::setMonth(uint8_t months)
 void TimeUnit::setDay(uint8_t days)
 {
     this->setDate(days, this->months, this->years);
+}
+
+void TimeUnit::addMinutes(uint8_t minutes)
+{
+    TimeObj::addMinutes(minutes);
+    sendToMB();
+    sendToEE(into_ee_after_edit);
 }
 
 void TimeUnit::sendToEE(bool call_flag)

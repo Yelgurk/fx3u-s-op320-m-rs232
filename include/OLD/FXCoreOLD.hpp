@@ -1,10 +1,9 @@
 #include <Arduino.h>
-#include "MBDispatcher.hpp"
-#include "IODispatcher.hpp"
-#include "EEDispatcher.hpp"
-#include "TaskManager.hpp"
+#include "../include/MBDispatcher/MBDispatcher.hpp"
+#include "../include/IODispatcher/IODispatcher.hpp"
+#include "../include/EEDispatcher/EEDispatcher.hpp"
+#include "../include/TaskManager/TaskManager.hpp"
 #include <STM32RTC.h>
-#include "RTCObject.hpp"
 
 #ifndef _fxcore_hpp
 #define _fxcore_hpp
@@ -43,19 +42,19 @@ private:
     uint8_t pasteur_proc_pasteur_tempC = 0;
     uint8_t pasteur_proc_heeting_tempC = 0;
     uint8_t pasteur_proc_freezing_tempC = 0;
-    RTCObject rtc_pasteur_started;
-    RTCObject rtc_pasteur_finished;
-    RTCObject rtc_pasteur_paused;
-    RTCObject rtc_pasteur_finish_time;
-    RTCObject rtc_pasteur_in_proc;
-    RTCObject rtc_pasteur_in_await;
-    RTCObject rtc_current_time;
-    RTCObject rtc_pasteur_last_point;
+    //RTCObject rtc_pasteur_started;
+    //RTCObject rtc_pasteur_finished;
+    //RTCObject rtc_pasteur_paused;
+    //RTCObject rtc_pasteur_finish_time;
+    //RTCObject rtc_pasteur_in_proc;
+    //RTCObject rtc_pasteur_in_await;
+    //RTCObject rtc_current_time;
+    //RTCObject rtc_pasteur_last_point;
     uint8_t rtc_pasteur_estimated_mm = 0;
     uint8_t pasteur_preset_runned = 0;
 
     // pasteur preset variables
-    RTCObject pasteur_rtc_triggers[PASTEUR_PRESET_CNT];
+    //RTCObject pasteur_rtc_triggers[PASTEUR_PRESET_CNT];
     uint8_t pasteur_preset_pasteur_tempC[PASTEUR_PRESET_CNT] { 0 };
     uint8_t pasteur_preset_heating_tempC[PASTEUR_PRESET_CNT] { 0 };
     uint8_t pasteur_preset_freezing_tempC[PASTEUR_PRESET_CNT] { 0 };
@@ -67,7 +66,7 @@ private:
     uint8_t pasteur_preset_selected = 0;
 
     // blowgun preset variables
-    RTCObject blowgun_start_washing_time;
+    //RTCObject blowgun_start_washing_time;
     int16_t blowgun_preset_volume[BLOWGUN_PRESET_CNT] { 0 };
     uint8_t blowgun_prescaler_table[3] { 10, 25, 50 };
     uint8_t blowgun_pretime_table[3] { 15, 30, 60 };

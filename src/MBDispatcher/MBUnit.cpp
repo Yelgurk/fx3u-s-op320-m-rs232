@@ -1,4 +1,4 @@
-#include "MBUnit.hpp"
+#include "../include/MBDispatcher/MBUnit.hpp"
 
 MBUnit::MBUnit(uint16_t (&mb_array)[MB_UNIT_BUFF_SIZE], uint16_t op320_index, type value_type)
 {
@@ -57,7 +57,7 @@ uint16_t MBUnit::readValue()
 }
 
 void MBUnit::readValue(uint8_t* var) {
-    var = readValue();
+    *var = (uint8_t)readValue();
 }
 
 bool MBUnit::triggerFired()

@@ -66,7 +66,7 @@ public:
         preset_toggle = new SettingUnit(NULL, mb_auto_preset_toggle, 1);
         preset_runned_today = new SettingUnit(NULL, NULL);
 
-        for (uint8_t index = 0; index < PASTEUR_PRESET_CNT - 1; index++)
+        for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
         {
             run_rtc_trigger[index] = new TimeUnit(false);
             run_rtc_trigger[index]->setEEPointer(ee_run_on_mm[index], PointerType::Minutes);
@@ -111,11 +111,66 @@ public:
 
     uint8_t isTimeToRunPreset(TimeUnit &current_time)
     {
-        for (uint8_t index = 0; index < PASTEUR_PRESET_CNT - 1; index++)
-            if (!run_rtc_trigger[index]->isBiggerThan(current_time, true))
+        for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
+            if (!run_rtc_trigger[index]->isBiggerThan(current_time, true) &&
+                preset_toggle->getValue() == 1 &&
+                preset_runned_today->getValue() == 0)
                 return index;
 
         return 255;
+    }
+
+    bool startPreset(
+        uint8_t preset_index,
+        uint8_t *pasteur_tempC,
+        uint8_t *heating_tempC,
+        uint8_t *freezing_tempC,
+        uint8_t *duration_mm,
+        TimeUnit *current_dateTime,
+        TimeUnit *finish_dateTime
+    )
+    {
+        if (preset_runned_today->getValue() == 1)
+            return false;
+
+        selectPreset(preset_index);
+        *pasteur_tempC = preset_pasteur_tempC->getValue();
+        *heating_tempC = preset_heating_tempC->getValue();
+        *freezing_tempC = preset_freezing_tempC->getValue();
+        *duration_mm = preset_duration_mm->getValue();
+        finish_dateTime->clone(*current_dateTime);
+        finish_dateTime->addMinutes(preset_duration_mm->getValue());
+        preset_runned_today->setValue(1);
+
+        return true;
+    }
+
+    void resumePreset(
+        uint8_t preset_index,
+        uint8_t *pasteur_tempC,
+        uint8_t *heating_tempC,
+        uint8_t *freezing_tempC,
+        uint8_t *duration_mm,
+        TimeUnit *last_point_dateTime,
+        TimeUnit *current_dateTime,
+        TimeUnit *old_finish_dateTime
+    )
+    {
+        selectPreset(preset_index);
+        uint8_t left_mm = old_finish_dateTime->getDiffMin(*last_point_dateTime);
+        *pasteur_tempC = preset_pasteur_tempC->getValue();
+        *heating_tempC = preset_heating_tempC->getValue();
+        *freezing_tempC = preset_freezing_tempC->getValue();
+        *duration_mm = preset_duration_mm->getValue();
+        old_finish_dateTime->clone(*current_dateTime);
+        old_finish_dateTime->addMinutes(left_mm);
+    }
+
+    void newDay()
+    {
+        for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
+            ee_is_runned_today[index]->writeEE(0);
+        preset_runned_today->refreshValue();
     }
 };
 

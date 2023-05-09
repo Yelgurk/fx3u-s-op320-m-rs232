@@ -1,4 +1,6 @@
-#include "FXCoreOLD.hpp"
+#include "../include/OLD/FXCoreOLD.hpp"
+
+/*
 
 void FXCore::init()
 {
@@ -822,6 +824,8 @@ void FXCore::readPassword(uint8_t number)
 
 /* PRIVATE + PROTECTED */
 
+/*
+
 void FXCore::blowingSelectPreset(uint8_t preset_id)
 {
     blowgun_preset_selected = preset_id;
@@ -944,3 +948,5 @@ void FXCore::readTempCSensor()
 
     is_heaters_available = true;
 }
+
+*/

@@ -1,4 +1,4 @@
-#include "EEPROM.hpp"
+#include "../include/EEDispatcher/EEPROM.hpp"
 
 EEPROM::EEPROM() {
     this->ssitcm = new SlowSoftI2CMaster(PA13, PA15, true);
