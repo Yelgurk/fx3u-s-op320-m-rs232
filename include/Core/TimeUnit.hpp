@@ -26,6 +26,7 @@ private:
     MBUnit *mb_date_YY_obj = NULL;
 
 public:
+    TimeUnit() { }
     TimeUnit(bool into_ee_after_edit);
     void setEEPointer(EEUnit* pointer, PointerType type);
     void setMBPointer(MBUnit* pointer, PointerType type);

@@ -10,21 +10,24 @@ void TimeObj::clone(TimeObj parent)
     this->years = parent.years;
 }
 
-bool TimeObj::isBiggerThan(TimeObj reference) {
-    return getDiffMin(reference) > 0 ? true : false;
+bool TimeObj::isBiggerThan(TimeObj &reference, bool relative_today) {
+    return getDiffMin(reference, relative_today) > 0 ? true : false;
 }
 
-uint16_t TimeObj::getDiffMin(TimeObj reference)
+uint16_t TimeObj::getDiffMin(TimeObj &reference, bool relative_today)
 {
-    uint64_t THIS = (years * 365 * 24 * 60) +
+    uint64_t THIS = hours * 60 + minutes +
+                    relative_today ? 0 :
+                    (years * 365 * 24 * 60) +
                     (months * 31 * 24 * 60) +
-                    (days * 24 * 60) +
-                    hours * 60 + minutes;
+                    (days * 24 * 60);
+                    
 
-    uint64_t Ref = (reference.years * 365 * 24 * 60) +
+    uint64_t Ref = reference.hours * 60 + reference.minutes +
+                   relative_today ? 0 :
+                   (reference.years * 365 * 24 * 60) +
                    (reference.months * 31 * 24 * 60) +
-                   (reference.days * 24 * 60) +
-                   reference.hours * 60 + reference.minutes;
+                   (reference.days * 24 * 60);
 
     return THIS > Ref ? THIS - Ref : 0;
 }

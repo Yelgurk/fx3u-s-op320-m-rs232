@@ -23,8 +23,8 @@ public:
     uint8_t getMonths();
     uint8_t getYears();
     void clone(TimeObj parent);
-    bool isBiggerThan(TimeObj reference);
-    uint16_t getDiffMin(TimeObj reference);
+    bool isBiggerThan(TimeObj &reference, bool relative_today = false);
+    uint16_t getDiffMin(TimeObj &reference, bool relative_today = false);
 };
 
 #endif

@@ -8,12 +8,12 @@ void TimeUnit::setEEPointer(EEUnit* pointer, PointerType type)
 {
     switch (type)
     {
-        case PointerType::Seconds: this->ee_time_ss_obj = pointer; break;
-        case PointerType::Minutes: this->ee_time_mm_obj = pointer; break;
-        case PointerType::Hours: this->ee_time_hh_obj = pointer; break;
-        case PointerType::Days: this->ee_date_DD_obj = pointer; break;
-        case PointerType::Months: this->ee_date_MM_obj = pointer; break;
-        case PointerType::Years: this->ee_date_YY_obj = pointer; break;
+        case Seconds: this->ee_time_ss_obj = pointer; break;
+        case Minutes: this->ee_time_mm_obj = pointer; break;
+        case Hours: this->ee_time_hh_obj = pointer; break;
+        case Days: this->ee_date_DD_obj = pointer; break;
+        case Months: this->ee_date_MM_obj = pointer; break;
+        case Years: this->ee_date_YY_obj = pointer; break;
     }
 }
 
@@ -21,17 +21,19 @@ void TimeUnit::setMBPointer(MBUnit* pointer, PointerType type)
 {
     switch (type)
     {
-        case PointerType::Seconds: this->mb_time_ss_obj = pointer; break;
-        case PointerType::Minutes: this->mb_time_mm_obj = pointer; break;
-        case PointerType::Hours: this->mb_time_hh_obj = pointer; break;
-        case PointerType::Days: this->mb_date_DD_obj = pointer; break;
-        case PointerType::Months: this->mb_date_MM_obj = pointer; break;
-        case PointerType::Years: this->mb_date_YY_obj = pointer; break;
+        case Seconds: this->mb_time_ss_obj = pointer; break;
+        case Minutes: this->mb_time_mm_obj = pointer; break;
+        case Hours: this->mb_time_hh_obj = pointer; break;
+        case Days: this->mb_date_DD_obj = pointer; break;
+        case Months: this->mb_date_MM_obj = pointer; break;
+        case Years: this->mb_date_YY_obj = pointer; break;
     }
 }
 
-void TimeUnit::clone(TimeObj parent) {
+void TimeUnit::clone(TimeObj parent)
+{
     this->TimeObj::clone(parent);
+    sendToEE(into_ee_after_edit);
 }
 
 void TimeUnit::setRealTime()
@@ -126,7 +128,7 @@ void TimeUnit::sendToEE(bool call_flag)
 void TimeUnit::sendToMB()
 {
     if (mb_time_ss_obj) mb_time_ss_obj->writeValue((uint16_t)this->seconds);
-    if (mb_time_hh_obj) mb_time_hh_obj->writeValue((uint16_t)this->minutes);
+    if (mb_time_mm_obj) mb_time_mm_obj->writeValue((uint16_t)this->minutes);
     if (mb_time_hh_obj) mb_time_hh_obj->writeValue((uint16_t)this->hours);
     if (mb_date_DD_obj) mb_date_DD_obj->writeValue((uint16_t)this->days);
     if (mb_date_MM_obj) mb_date_MM_obj->writeValue((uint16_t)this->months);
@@ -147,7 +149,7 @@ void TimeUnit::loadFromEE()
 void TimeUnit::loadFromMB()
 {
     if (mb_time_ss_obj) mb_time_ss_obj->readValue(&this->seconds);
-    if (mb_time_hh_obj) mb_time_hh_obj->readValue(&this->minutes);
+    if (mb_time_mm_obj) mb_time_mm_obj->readValue(&this->minutes);
     if (mb_time_hh_obj) mb_time_hh_obj->readValue(&this->hours);
     if (mb_date_DD_obj) mb_date_DD_obj->readValue(&this->days);
     if (mb_date_MM_obj) mb_date_MM_obj->readValue(&this->months);

@@ -60,10 +60,10 @@ private:
                 master_pump_LM_performance = SettingUnit(&ee_master_pump_perf_lm, &mb_blowing_performance_lm),
                 master_4ma_negative_limit = SettingUnit(&ee_master_4ma_adc_value, &mb_4ma_adc_limit),
                 master_20ma_positive_limit = SettingUnit(&ee_master_20ma_adc_value, &mb_20ma_adc_limit);
-    AutoPasteurPreset auto_prog_presets;
     BlowingPreset blowgun_presets;
+    AutoPasteurPreset auto_prog_presets;
 public:
-
+    FXCore();
 };
 
 #endif

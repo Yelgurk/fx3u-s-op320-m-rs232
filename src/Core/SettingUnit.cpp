@@ -10,6 +10,12 @@ SettingUnit::SettingUnit(EEUnit *ee_var_pointer, MBUnit *mb_var_pointer, uint8_t
     refreshValue();
 }
 
+void SettingUnit::changeEEpointer(EEUnit *ee_var_pointer)
+{
+    this->ee_var_pointer = ee_var_pointer;
+    refreshValue();
+}
+
 void SettingUnit::setScale(uint8_t display_scale) {
     this->display_scale = display_scale;
     displayValue();
@@ -47,7 +53,7 @@ void SettingUnit::setValue(uint8_t value)
 void SettingUnit::acceptNewValue()
 {
     if (ee_var_pointer) ee_var_pointer->writeEE(this->workable_value);
-    displayValue();
+    refreshValue();
 }
 
 void SettingUnit::refreshValue()
