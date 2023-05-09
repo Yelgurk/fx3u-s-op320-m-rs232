@@ -113,6 +113,17 @@ void TimeUnit::setDay(uint8_t days)
     this->setDate(days, this->months, this->years);
 }
 
+void TimeUnit::setZeroDateTime()
+{
+    this->seconds = 0;
+    this->minutes = 0;
+    this->hours = 0;
+    this->days = 0;
+    this->months = 0;
+    this->years = 0;
+    sendToMB();
+}
+
 void TimeUnit::addMinutes(uint8_t minutes)
 {
     TimeObj::addMinutes(minutes);

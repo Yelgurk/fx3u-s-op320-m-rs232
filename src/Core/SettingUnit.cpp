@@ -64,7 +64,7 @@ void SettingUnit::refreshValue()
 
 void SettingUnit::incValue()
 {
-    this->workable_value = (max_limit > 0 && workable_value < max_limit) || workable_value < 255 ? ++workable_value : 0;
+    this->workable_value = (max_limit > 0 && workable_value < max_limit) || (max_limit == 0 && workable_value < 255) ? ++workable_value : 0;
     acceptNewValue();
 }
 

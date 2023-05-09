@@ -26,10 +26,13 @@
 #define PASTEUR_AWAIT_LIMIT_MM 60
 #define BLOWGUN_PRESET_WASHING 3
 
-enum class FinishFlag   { Success, UserCall, MixerError, Power380vError, WaterJacketError, COUNT };
-enum class OP320Process { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
-enum class OP320Step    { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, COUNT };
-enum class OP320Error   { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, COUNT };
+enum class MACHINE_STATE { Nothing, Heating, Freezing, Pasteurizing };
+enum class FINISH_FLAG   { Success, UserCall, MixerError, Power380vError, WaterJacketError, COUNT };
+enum class OP320_PROCESS { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
+enum class OP320_STEP    { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, COUNT };
+enum class OP320_ERROR   { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, COUNT };
+
+/* int to enum => uint8_t X = 1; ENUM Y = static_cast<ENUM>(x); */
 
 class FXCore : protected MBDispatcher, protected IODispatcher, protected EEDispatcher, public TaskManager
 {
@@ -42,7 +45,9 @@ private:
                 *rtc_prog_expected_finish,
                 *rtc_prog_pasteur_paused,
                 *rtc_prog_pasteur_finished;
-    SettingUnit *info_main_process,
+    SettingUnit *scr_set_op320,
+                *scr_get_op320,
+                *info_main_process,
                 *info_main_step_show_hide,
                 *info_main_step,
                 *info_error_notify,
@@ -65,6 +70,7 @@ private:
     AutoPasteurPreset *auto_prog_presets;
 public:
     FXCore();
+    void setNewDateTime();
 };
 
 #endif
