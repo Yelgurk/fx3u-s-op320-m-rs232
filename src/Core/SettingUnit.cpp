@@ -35,7 +35,7 @@ void SettingUnit::displayValue()
         else
         {
             uint16_t final_value = (uint16_t)this->workable_value * (uint16_t)this->display_scale;
-            mb_var_pointer->writeValue((uint16_t)((final_value / display_split) + (final_value % display_split)));
+            mb_var_pointer->writeValue((uint16_t)((display_split == 60 ? final_value / display_split * 100 : final_value / display_split) + (final_value % display_split)));
         }
     }
 }

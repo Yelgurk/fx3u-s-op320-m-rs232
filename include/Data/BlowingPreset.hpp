@@ -15,7 +15,7 @@
 class BlowingPreset
 {
 private:
-    EEUnit **ee_blowgun_preset_arr;
+    EEUnit *ee_blowgun_preset_arr;
 
     SettingUnit *preset_selected,
                 *preset_value,
@@ -46,7 +46,7 @@ private:
     }
 
 public:
-    BlowingPreset(MBUnit *mb_blowing_preset_list, MBUnit *mb_blowing_volume, MBUnit *mb_blowing_incV, MBUnit *mb_blowing_decV, EEUnit **ee_blowgun_preset_arr)
+    BlowingPreset(MBUnit *mb_blowing_preset_list, MBUnit *mb_blowing_volume, MBUnit *mb_blowing_incV, MBUnit *mb_blowing_decV, EEUnit *ee_blowgun_preset_arr)
     {
         preset_selected = new SettingUnit(NULL, mb_blowing_preset_list, BLOWGUN_PRESET_CNT - 1);
         preset_value = new SettingUnit(NULL, mb_blowing_volume, 240, DISPLAY_SCALE_VALUE);
@@ -59,7 +59,7 @@ public:
     void selectPreset(uint8_t index)
     {
         preset_selected->setValue(index);
-        preset_value->changeEEpointer(ee_blowgun_preset_arr[preset_selected->getValue()]);
+        preset_value->changeEEpointer(&ee_blowgun_preset_arr[preset_selected->getValue()]);
         preset_value->setSplit(preset_selected->getValue() < BLOWGUN_PRESET_CNT - 1 ? 1 : DISPLAY_SPLIT_SEC);
         displaySelectedScaler();
     }

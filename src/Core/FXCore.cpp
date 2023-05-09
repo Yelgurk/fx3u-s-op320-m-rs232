@@ -2,17 +2,12 @@
 
 FXCore::FXCore()
 {
-    MBDispatcher::init();
-    EEDispatcher::init();
-    IODispatcher::init();
+    this->MBDispatcher::init();
+    this->EEDispatcher::init();
+    this->IODispatcher::init();
 
-    rtc_general_current = new TimeUnit(false);
-    rtc_general_set_new = new TimeUnit(false);
-    rtc_general_last_point = new TimeUnit(true);
-    rtc_prog_pasteur_started = new TimeUnit(true);
-    rtc_prog_expected_finish = new TimeUnit(true);
-    rtc_prog_pasteur_paused = new TimeUnit(true);
-    rtc_prog_pasteur_finished = new TimeUnit(true);
+    rtc.setClockSource(STM32RTC::LSE_CLOCK);
+    rtc.begin();
 
     info_main_process = new SettingUnit(NULL, &mb_proc_list, (uint8_t)OP320Process::COUNT - 1);
     info_main_step_show_hide = new SettingUnit(NULL, &mb_step_name_list, 1);
@@ -22,7 +17,7 @@ FXCore::FXCore()
     solo_heating_tempC = new SettingUnit(&ee_solo_heating_tempC, &mb_solo_heating_tempC);
     solo_freezing_tempC = new SettingUnit(&ee_solo_freezing_tempC, &mb_self_freezing_tempC);
     
-    calibration_blowgun_main_dose = new SettingUnit(NULL, &mb_blow_calib_dosage, 0, 1000);
+    calibration_blowgun_main_dose = new SettingUnit(NULL, &mb_blow_calib_dosage, 0, 100);
     calibration_blowgun_dope_dose = new SettingUnit(&ee_blowgun_calib_range, &mb_blow_calib_range, 0, 10);
     
     self_prog_pasteur_tempC = new SettingUnit(&ee_self_pasteur_tempC, &mb_self_pasteur_tempC);
@@ -65,5 +60,31 @@ FXCore::FXCore()
         &mb_auto_preset_toggle
     );
 
+    rtc_general_current = new TimeUnit(false);
+    rtc_general_set_new = new TimeUnit(false);
+    rtc_general_last_point = new TimeUnit(true);
+    rtc_prog_pasteur_started = new TimeUnit(true);
+    rtc_prog_expected_finish = new TimeUnit(true);
+    rtc_prog_pasteur_paused = new TimeUnit(true);
+    rtc_prog_pasteur_finished = new TimeUnit(true);
+
+    rtc_general_current->setMBPointer(&mb_rtc_ss, PointerType::Seconds);
+    rtc_general_current->setMBPointer(&mb_rtc_mm, PointerType::Minutes);
+    rtc_general_current->setMBPointer(&mb_rtc_hh, PointerType::Hours);
+    rtc_general_current->setMBPointer(&mb_rtc_DD, PointerType::Days);
+    rtc_general_current->setMBPointer(&mb_rtc_MM, PointerType::Months);
+    rtc_general_current->setMBPointer(&mb_rtc_YY, PointerType::Years);
+
+    mb_comm_blow_preset_1.addTrigger([this]() ->        void { blowgun_presets->selectPreset(0); });
+    mb_comm_blow_preset_2.addTrigger([this]() ->        void { blowgun_presets->selectPreset(1); });
+    mb_comm_blow_preset_3.addTrigger([this]() ->        void { blowgun_presets->selectPreset(2); });
+    mb_comm_blow_preset_4.addTrigger([this]() ->        void { blowgun_presets->selectPreset(3); });
+    mb_comm_blow_vInc.addTrigger([this]() ->            void { blowgun_presets->incValue(); });
+    mb_comm_blow_vDec.addTrigger([this]() ->            void { blowgun_presets->decValue(); });
+    mb_comm_blow_prescaler.addTrigger([this]() ->       void { blowgun_presets->changeScaler(); });
+    mb_comm_solo_tempC_cancel.addTrigger([this]() ->    void { solo_heating_tempC->refreshValue(); solo_freezing_tempC->refreshValue(); });
+    mb_comm_solo_tempC_accept.addTrigger([this]() ->    void { solo_heating_tempC->setValueByModbus(); solo_freezing_tempC->setValueByModbus(); });
+
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); });
+    TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); });
 }

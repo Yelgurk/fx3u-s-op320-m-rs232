@@ -20,25 +20,25 @@ private:
                 *preset_toggle,
                 *preset_runned_today;
 
-    EEUnit **ee_pasteur_tempC,
-           **ee_heating_tempC,
-           **ee_freezing_tempC,
-           **ee_pasteur_duratMM,
-           **ee_run_on_hh,
-           **ee_run_on_mm,
-           **ee_run_toggle,
-           **ee_is_runned_today;
+    EEUnit *ee_pasteur_tempC,
+           *ee_heating_tempC,
+           *ee_freezing_tempC,
+           *ee_pasteur_duratMM,
+           *ee_run_on_hh,
+           *ee_run_on_mm,
+           *ee_run_toggle,
+           *ee_is_runned_today;
 
 public:
     AutoPasteurPreset(
-        EEUnit **ee_pasteur_tempC,
-        EEUnit **ee_heating_tempC,
-        EEUnit **ee_freezing_tempC,
-        EEUnit **ee_pasteur_duratMM,
-        EEUnit **ee_run_on_hh,
-        EEUnit **ee_run_on_mm,
-        EEUnit **ee_run_toggle,
-        EEUnit **ee_is_runned_today,
+        EEUnit *ee_pasteur_tempC,
+        EEUnit *ee_heating_tempC,
+        EEUnit *ee_freezing_tempC,
+        EEUnit *ee_pasteur_duratMM,
+        EEUnit *ee_run_on_hh,
+        EEUnit *ee_run_on_mm,
+        EEUnit *ee_run_toggle,
+        EEUnit *ee_is_runned_today,
         MBUnit *mb_auto_preset_list,
         MBUnit *mb_auto_pasteur_tempC,
         MBUnit *mb_auto_heating_tempC,
@@ -69,8 +69,8 @@ public:
         for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
         {
             run_rtc_trigger[index] = new TimeUnit(false);
-            run_rtc_trigger[index]->setEEPointer(ee_run_on_mm[index], PointerType::Minutes);
-            run_rtc_trigger[index]->setEEPointer(ee_run_on_hh[index], PointerType::Hours);
+            run_rtc_trigger[index]->setEEPointer(&ee_run_on_mm[index], PointerType::Minutes);
+            run_rtc_trigger[index]->setEEPointer(&ee_run_on_hh[index], PointerType::Hours);
             run_rtc_trigger[index]->setMBPointer(mb_auto_run_rtc_mm, PointerType::Minutes);
             run_rtc_trigger[index]->setMBPointer(mb_auto_run_rtc_hh, PointerType::Hours);
             run_rtc_trigger[index]->loadFromEE();
@@ -82,12 +82,12 @@ public:
     void selectPreset(uint8_t index)
     {
         preset_selected->setValue(index);
-        preset_pasteur_tempC->changeEEpointer(ee_pasteur_tempC[preset_selected->getValue()]);
-        preset_heating_tempC->changeEEpointer(ee_heating_tempC[preset_selected->getValue()]);
-        preset_freezing_tempC->changeEEpointer(ee_freezing_tempC[preset_selected->getValue()]);
-        preset_duration_mm->changeEEpointer(ee_pasteur_duratMM[preset_selected->getValue()]);
-        preset_toggle->changeEEpointer(ee_run_toggle[preset_selected->getValue()]);
-        preset_runned_today->changeEEpointer(ee_is_runned_today[preset_selected->getValue()]);
+        preset_pasteur_tempC->changeEEpointer(&ee_pasteur_tempC[preset_selected->getValue()]);
+        preset_heating_tempC->changeEEpointer(&ee_heating_tempC[preset_selected->getValue()]);
+        preset_freezing_tempC->changeEEpointer(&ee_freezing_tempC[preset_selected->getValue()]);
+        preset_duration_mm->changeEEpointer(&ee_pasteur_duratMM[preset_selected->getValue()]);
+        preset_toggle->changeEEpointer(&ee_run_toggle[preset_selected->getValue()]);
+        preset_runned_today->changeEEpointer(&ee_is_runned_today[preset_selected->getValue()]);
         run_rtc_trigger[preset_selected->getValue()]->loadFromEE();
     }
 
@@ -169,7 +169,7 @@ public:
     void newDay()
     {
         for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
-            ee_is_runned_today[index]->writeEE(0);
+            ee_is_runned_today[index].writeEE(0);
         preset_runned_today->refreshValue();
     }
 };

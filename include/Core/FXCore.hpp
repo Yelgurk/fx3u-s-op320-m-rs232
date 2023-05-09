@@ -34,6 +34,7 @@ enum class OP320Error   { Power380vOut, Mixer, Power380vIn, PowerMoreHour, Water
 class FXCore : protected MBDispatcher, protected IODispatcher, protected EEDispatcher, public TaskManager
 {
 private:
+    STM32RTC& rtc = STM32RTC::getInstance();
     TimeUnit    *rtc_general_current,
                 *rtc_general_set_new,
                 *rtc_general_last_point,

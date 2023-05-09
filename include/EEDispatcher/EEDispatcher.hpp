@@ -14,15 +14,15 @@ private:
     EEPROM ee24c64;
 
 public:
-    EEUnit **ee_blowgun_preset_arr;
-    EEUnit **ee_auto_pasteur_tempC_arr;
-    EEUnit **ee_auto_heating_tempC_arr;
-    EEUnit **ee_auto_freezing_tempC_arr;
-    EEUnit **ee_auto_pasteur_duratMM_arr;    
-    EEUnit **ee_auto_run_on_hh_arr;
-    EEUnit **ee_auto_run_on_mm_arr;
-    EEUnit **ee_auto_run_toggle_arr;
-    EEUnit **ee_auto_is_runned_today_arr;  
+    EEUnit *ee_blowgun_preset_arr;
+    EEUnit *ee_auto_pasteur_tempC_arr;
+    EEUnit *ee_auto_heating_tempC_arr;
+    EEUnit *ee_auto_freezing_tempC_arr;
+    EEUnit *ee_auto_pasteur_duratMM_arr;    
+    EEUnit *ee_auto_run_on_hh_arr;
+    EEUnit *ee_auto_run_on_mm_arr;
+    EEUnit *ee_auto_run_toggle_arr;
+    EEUnit *ee_auto_is_runned_today_arr;  
 
     EEUnit ee_blowgun_preset_1 = EEUnit(0x0000, &ee24c64, false),
            ee_blowgun_preset_2 = EEUnit(0x0001, &ee24c64, false),
