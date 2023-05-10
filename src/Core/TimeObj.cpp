@@ -58,6 +58,10 @@ bool TimeObj::isBiggerThan(TimeObj &reference, bool relative_today) {
     return getDiffMin(reference, relative_today) > 0 ? true : false;
 }
 
+bool TimeObj::isTimeEqual(TimeObj &reference) {
+    return this->minutes == reference.minutes && this->hours == reference.hours ? true : false;
+}
+
 uint16_t TimeObj::getDiffMin(TimeObj &reference, bool relative_today)
 {
     uint64_t THIS = hours * 60 + minutes +

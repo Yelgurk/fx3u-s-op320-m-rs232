@@ -29,6 +29,7 @@ public:
     void addMinutes(uint8_t minutes);
     bool isAnotherDay(TimeObj &reference);
     bool isBiggerThan(TimeObj &reference, bool relative_today = false);
+    bool isTimeEqual(TimeObj &reference);
     uint16_t getDiffMin(TimeObj &reference, bool relative_today = false);
 };
 

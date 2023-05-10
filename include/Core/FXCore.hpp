@@ -11,6 +11,7 @@
 
 #include "../include/Data/AutoPasteurPreset.hpp"
 #include "../include/Data/BlowingPreset.hpp"
+#include "../include/Data/PasswordAccess.hpp"
 
 #ifndef FXCore_hpp
 #define FXCore_hpp
@@ -26,25 +27,41 @@
 #define PASTEUR_AWAIT_LIMIT_MM 60
 #define BLOWGUN_PRESET_WASHING 3
 
-enum class MACHINE_STATE { Nothing, Heating, Freezing, Pasteurizing };
-enum class FINISH_FLAG   { Success, UserCall, MixerError, Power380vError, WaterJacketError, COUNT };
-enum class OP320_PROCESS { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
-enum class OP320_STEP    { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, COUNT };
-enum class OP320_ERROR   { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, COUNT };
+enum class MACHINE_STATE : uint8_t { Nothing, Heating, Freezing, Pasteurizing, COUNT };
+enum class FINISH_FLAG   : uint8_t { Success, UserCall, MixerError, Power380vError, WaterJacketError, COUNT };
+enum class PROG_TYPE     : uint8_t { OnlyPasteur, WithFreezing, FullCycle, COUNT };
+enum class PROG_STATE    : uint8_t { PasteurRunning, PasteurPaused, PasteurFinished, FreezingFinished, HeatingFinished, COUNT };
+enum class OP320_PROCESS : uint8_t { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
+enum class OP320_STEP    : uint8_t { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, COUNT };
+enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, COUNT };
 
 /* int to enum => uint8_t X = 1; ENUM Y = static_cast<ENUM>(x); */
 
-class FXCore : protected MBDispatcher, protected IODispatcher, protected EEDispatcher, public TaskManager
+class FXCore : protected MBDispatcher, protected IODispatcher, protected EEDispatcher, protected PasswordAccess, public TaskManager
 {
 private:
     STM32RTC& rtc = STM32RTC::getInstance();
-    TimeUnit    *rtc_general_current,
-                *rtc_general_set_new,
-                *rtc_general_last_point,
-                *rtc_prog_pasteur_started,
-                *rtc_prog_expected_finish,
+    
+    /* task var */
+    bool is_task_freezing_running = false,
+         is_task_heating_running = false;
+    SettingUnit *prog_running,
+                *prog_state,
+                *prog_preset_selected,
+                *prog_need_in_freezing,
+                *prog_need_in_heating,
+                *prog_jacket_filled,
+                *prog_finished_flag;
+    TimeUnit    *rtc_prog_pasteur_started,
                 *rtc_prog_pasteur_paused,
-                *rtc_prog_pasteur_finished;
+                *rtc_prog_finished,
+                *rtc_prog_expected_finish,
+                *rtc_prog_duration_mm_span;
+
+    /* configs */
+    TimeUnit    *rtc_general_current,
+                *rtc_general_last_time_point,
+                *rtc_general_set_new;
     SettingUnit *scr_set_op320,
                 *scr_get_op320,
                 *info_main_process,
@@ -68,9 +85,28 @@ private:
                 *master_20ma_positive_limit;
     BlowingPreset *blowgun_presets;
     AutoPasteurPreset *auto_prog_presets;
+
+    void checkIsHardReseted();
+    void checkIsProgWasRunned();
+
 public:
     FXCore();
     void setNewDateTime();
+    void stopAllTasks();
+    void taskTryBlowing();
+    void taskTryToggleHeating(bool turn_on);
+    void taskTryToggleFreezing(bool turn_on);
+    void taskToggleMixer(bool turn_on);
+    void taskStartProg(uint8_t pasteur_preset = 0);
+    void taskPauseProg(OP320_ERROR flag);
+    void taskResumeProg();
+    void taskFinishProg(FINISH_FLAG flag);
+    void taskHeaters(uint8_t expected_tempC);
+    void threadProg();
+    void threadMain();
+    void readSensors();
+    void unlockHeatStarter();
+    void hardReset();
 };
 
 #endif
