@@ -61,6 +61,21 @@ void FXCore::displayMainInfoVars()
     info_main_liq_tempC->setValue(liquid_tempC < 0 ? 0 : (liquid_tempC > 255 ? 255 : liquid_tempC));
 }
 
+void FXCore::displayTasksDeadline()
+{
+    if ((prog_running->getState() || is_task_washing_running) && scr_get_op320->getValue() == SCR_MASTER_PAGE)
+    {
+        displayOP320States();
+        scr_set_op320->setValue(SCR_MASTER_PAGE_TIME);
+    }
+
+    if (!(prog_running->getState() || is_task_washing_running) && scr_get_op320->getValue() == SCR_MASTER_PAGE_TIME)
+    {
+        displayOP320States();
+        scr_set_op320->setValue(SCR_MASTER_PAGE);
+    }
+}
+
 /* public */
 FXCore::FXCore()
 {
@@ -293,6 +308,7 @@ FXCore::FXCore()
     /* tasks: millis, func */
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); readSensors(); });
     TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); });
+    TaskManager::newTask(300,   [this]() -> void { displayTasksDeadline(); });
     TaskManager::newTask(400,   [this]() -> void { threadMain(); });
     TaskManager::newTask(1000,  [this]() -> void { displayMainInfoVars(); });
     TaskManager::newTask(10000, [this]() -> void {  }); //rtc last point (ee dynamic time) + check exp finish day for fix
@@ -514,7 +530,6 @@ void FXCore::taskFinishProg(FINISH_FLAG flag)
         taskToggleMixer(false);
         
         rtc_prog_finished->clone(*rtc_general_current);
-        ee_proc_pasteur_running.writeEE(0);
 
         if (flag > FINISH_FLAG::UserCall)
         {
@@ -639,7 +654,7 @@ bool FXCore::threadProg()
 
     if (prog_need_in_freezing->getState() ? !prog_freezing_part_finished->getState() : false)
     {
-        taskTryToggleFreezing(prog_freezing_tempC);
+        taskFreezing(prog_freezing_tempC);
         if (liquid_tempC <= prog_freezing_tempC)
         {
             prog_freezing_part_finished->setValue(1);
@@ -680,11 +695,6 @@ void FXCore::threadMain()
         machine_state->setValue(static_cast<uint8_t>(MACHINE_STATE::Flowing));
     else
         machine_state->setValue(static_cast<uint8_t>(MACHINE_STATE::Await));
-
-    if ((prog_running->getState() || is_task_washing_running) && scr_get_op320->getValue() == SCR_MASTER_PAGE)
-        scr_set_op320->setValue(SCR_MASTER_PAGE_TIME);
-    else if (!(prog_running->getState() || is_task_washing_running) && scr_get_op320->getValue() == SCR_MASTER_PAGE_TIME);
-        scr_set_op320->setValue(SCR_MASTER_PAGE);
 
     if (is_flowing_call && !prog_running->getState() && !is_stop_btn_pressed && !is_connected_380V && scr_get_op320->getValue() == SCR_BLOWING_PAGE)
         taskTryToggleFlowing();
@@ -736,7 +746,76 @@ void FXCore::readSensors()
 
 void FXCore::displayOP320States()
 {
-    
+    if (!prog_running->getState() &&
+        info_main_step->getValue() == static_cast<uint8_t>(OP320_STEP::PasteurFinish) &&
+        rtc_general_current->getDiffMin(*rtc_prog_finished) >= 5 &&
+        !rtc_prog_finished->isZeroTime())
+    {
+        info_main_step_show_hide->setValue(0);
+        info_main_step->setValue(0);
+    }
+
+    switch (static_cast<MACHINE_STATE>(machine_state->getValue()))
+    {
+    case MACHINE_STATE::Flowing: {
+        info_main_process->setValue(static_cast<uint8_t>(OP320_PROCESS::Washing));
+    } break;
+
+    case MACHINE_STATE::Freezing: {
+        info_main_process->setValue(static_cast<uint8_t>(OP320_PROCESS::Freezing));
+        info_main_step_show_hide->setValue(1);
+        info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::WaterJCirculation));
+    } break;
+
+    case MACHINE_STATE::Heating: {
+        info_main_process->setValue(static_cast<uint8_t>(OP320_PROCESS::Heating));
+        info_main_step_show_hide->setValue(1);
+        if (!is_water_in_jacket)
+            info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::WaterJacket));
+        else
+            info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::HeatingTo));
+    } break;
+
+    case MACHINE_STATE::Pasteurizing: {
+        info_main_process->setValue(static_cast<uint8_t>(OP320_PROCESS::PasteurSelf) + prog_preset_selected->getValue());
+        info_main_step_show_hide->setValue(1);
+        
+        if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurRunning))
+        {
+            if (!prog_jacket_filled->getState())
+                info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::WaterJacket));
+            else if (prog_jacket_filled->getState() && liquid_tempC < prog_pasteur_tempC)
+                info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::PasteurHeating));
+            else
+                info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::PasteurProc));
+        }
+        
+        else if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
+            info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::ErrSolveAwait));
+        
+        else if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurFinished))
+            info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::FreezingTo));
+        
+        else if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::FreezingFinished))
+            info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::HeatingTo));
+        
+        else 
+            info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::PasteurFinish));
+    } break;
+
+    default: {
+        if (info_main_step->getValue() != static_cast<uint8_t>(OP320_STEP::PasteurFinish))
+        {
+            info_main_step_show_hide->setValue(0);
+            info_main_step->setValue(0);
+        }
+
+        if (is_connected_380V)
+            info_main_process->setValue(static_cast<uint8_t>(OP320_PROCESS::Chargering));
+        else
+            info_main_process->setValue(static_cast<uint8_t>(OP320_PROCESS::Await));
+    } break;
+    }
 }
 
 void FXCore::hardReset()

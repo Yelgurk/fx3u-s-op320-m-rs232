@@ -32,7 +32,7 @@ enum class FINISH_FLAG   : uint8_t { Success, UserCall, MixerError, Power380vErr
 //enum class PROG_TYPE     : uint8_t { OnlyPasteur, WithFreezing, FullCycle, COUNT };
 enum class PROG_STATE    : uint8_t { PasteurRunning, PasteurPaused, PasteurFinished, FreezingFinished, HeatingFinished, CycleFinished, COUNT };
 enum class OP320_PROCESS : uint8_t { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
-enum class OP320_STEP    : uint8_t { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, COUNT };
+enum class OP320_STEP    : uint8_t { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, ErrSolveAwait, COUNT };
 enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, COUNT };
 
 /* int to enum => uint8_t X = 1; ENUM Y = static_cast<ENUM>(x); */
@@ -109,6 +109,7 @@ private:
     void checkIsHardReseted();
     bool checkIsProgWasRunned();
     void displayMainInfoVars();
+    void displayTasksDeadline();
 
 public:
     FXCore();

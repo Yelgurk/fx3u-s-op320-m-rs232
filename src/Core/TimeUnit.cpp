@@ -124,6 +124,18 @@ void TimeUnit::setZeroDateTime()
     sendToMB();
 }
 
+bool TimeUnit::isZeroTime()
+{
+    if (this->seconds == 0 &&
+        this->minutes == 0 &&
+        this->hours == 0 &&
+        this->days == 0 &&
+        this->months == 0 &&
+        this->years == 0)
+         return true;
+    else return false;
+}
+
 void TimeUnit::addMinutes(uint8_t minutes)
 {
     TimeObj::addMinutes(minutes);
