@@ -25,7 +25,7 @@ private:
     /* 0..2 => if (preset_selected < 3) 100ml..500ml/DISPLAY_SCALE || if (preset_selected == 3) 15sec..60sec/DISPLAY_SCALE  */
     uint8_t scale_selected = 0;
     uint8_t scale_ml_arr[3] { 2, 5, 10 };
-    uint8_t scale_sec_arr[3] { 3, 6, 12 };
+    uint8_t scale_sec_arr[3] { 12, 12, 12 };//{ 3, 6, 12 };
 
     void displaySelectedScaler()
     {
@@ -82,6 +82,17 @@ public:
             0
         );
     }
+
+    uint16_t getValue() {
+        return preset_selected->getValue() == BLOWGUN_PRESET_CNT - 1 ?
+            preset_value->getValue() * 5 :
+            preset_value->getValue() * 50;
+    }
+
+    bool isWashingSelected() {
+        return preset_selected->getValue() == 3 ? true : false;
+    }
+
 };
 
 #endif

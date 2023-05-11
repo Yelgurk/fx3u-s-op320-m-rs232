@@ -74,6 +74,10 @@ void SettingUnit::decValue()
     acceptNewValue();
 }
 
+bool SettingUnit::getState() {
+    return this->workable_value == 0 ? false : true;
+}
+
 uint8_t SettingUnit::getValue() {
     return this->workable_value;
 }

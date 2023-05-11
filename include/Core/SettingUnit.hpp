@@ -27,6 +27,7 @@ public:
     void refreshValue();
     void incValue();
     void decValue();
+    bool getState();
     uint8_t getValue();
     uint16_t getScaledValue();
 };
