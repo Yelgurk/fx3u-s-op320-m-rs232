@@ -7,6 +7,8 @@
 #define IN_YEAR 372 // calculation crutch
 #define IN_MONTH 31 // calculation crutch
 
+enum CloneType { All, Date, Time };
+
 class TimeObj
 {
 protected:
@@ -25,7 +27,7 @@ public:
     uint8_t getDays();
     uint8_t getMonths();
     uint8_t getYears();
-    void clone(TimeObj *parent);
+    void clone(TimeObj *parent, CloneType type = CloneType::All);
     void addMinutes(uint8_t minutes);
     bool isAnotherDay(TimeObj *reference);
     bool isBiggerThan(TimeObj *reference, bool relative_today = false);

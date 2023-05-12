@@ -162,6 +162,21 @@ public:
             ee_is_runned_today[index].writeEE(0);
         preset_runned_today->refreshValue();
     }
+
+    void setDefault()
+    {
+        for (uint8_t index = 0; index < 3; index++)
+        {
+            ee_pasteur_tempC[index].writeEE(65);
+            ee_heating_tempC[index].writeEE(45);
+            ee_freezing_tempC[index].writeEE(20);
+            ee_pasteur_duratMM[index].writeEE(30);
+            ee_run_on_hh[index].writeEE(8 + 5 * index);
+            ee_run_on_mm[index].writeEE(0);
+            ee_run_toggle[index].writeEE(0);
+            ee_is_runned_today[index].writeEE(0);
+        }
+    }
 };
 
 #endif

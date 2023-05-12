@@ -24,14 +24,21 @@ uint8_t TimeObj::getYears() {
     return this->years;
 }
 
-void TimeObj::clone(TimeObj *parent)
+void TimeObj::clone(TimeObj *parent, CloneType type)
 {
-    this->seconds = parent->seconds;
-    this->minutes = parent->minutes;
-    this->hours = parent->hours;
-    this->days = parent->days;
-    this->months = parent->months;
-    this->years = parent->years;
+    if (type == CloneType::All || type == CloneType::Time)
+    {
+        this->seconds = parent->seconds;
+        this->minutes = parent->minutes;
+        this->hours = parent->hours;
+    }
+
+    if (type == CloneType::All || type == CloneType::Date)
+    {
+        this->days = parent->days;
+        this->months = parent->months;
+        this->years = parent->years;
+    }
 }
 
 void TimeObj::addMinutes(uint8_t minutes)
@@ -53,7 +60,9 @@ void TimeObj::addMinutes(uint8_t minutes)
 }
 
 bool TimeObj::isAnotherDay(TimeObj *reference) {
-    return days != reference->days || months != reference->months || years != reference->years ? true : false;
+    return  this->days != reference->days ||
+            this->months != reference->months ||
+            this->years != reference->years ? true : false;
 }
 
 bool TimeObj::isBiggerThan(TimeObj *reference, bool relative_today) {

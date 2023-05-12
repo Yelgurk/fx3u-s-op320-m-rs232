@@ -100,6 +100,12 @@ public:
         return preset_selected->getValue() == 3 ? true : false;
     }
 
+    void setDefault() {
+        ee_blowgun_preset_arr[0].writeEE(60);
+        ee_blowgun_preset_arr[1].writeEE(90);
+        ee_blowgun_preset_arr[2].writeEE(120);
+        ee_blowgun_preset_arr[3].writeEE(60);
+    }
 };
 
 #endif

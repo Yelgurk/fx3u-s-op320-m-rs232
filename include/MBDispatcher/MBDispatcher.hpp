@@ -7,7 +7,7 @@
 #ifndef MBDispatcher_hpp
 #define MBDispatcher_hpp
 
-#define COMM_COUNT 38
+#define COMM_COUNT 40
 
 class MBDispatcher
 {
@@ -69,6 +69,7 @@ public:
            mb_hysteresis = MBUnit(mb_au16data, 46, type::Uint16),
            mb_blowing_performance_lm = MBUnit(mb_au16data, 47, type::Uint16),
            mb_notification_list = MBUnit(mb_au16data, 48, type::Uint16),
+           mb_machine_type = MBUnit(mb_au16data, 52, type::Uint16),
 
            mb_comm_stop_proc = MBUnit(mb_au16data, 784, type::Coil),
            mb_comm_blow_preset_1 = MBUnit(mb_au16data, 785, type::Coil),
@@ -111,7 +112,9 @@ public:
            mb_comm_solo_freezing_toggle = MBUnit(mb_au16data, 820, type::Coil),
            mb_comm_blowgun_run_btn = MBUnit(mb_au16data, 821, type::Coil),
            mb_comm_goto_scr_blowing = MBUnit(mb_au16data, 822, type::Coil),
-           mb_comm_goto_scr_master = MBUnit(mb_au16data, 823, type::Coil);
+           mb_comm_goto_scr_master = MBUnit(mb_au16data, 823, type::Coil),
+           mb_master_machine_type_up = MBUnit(mb_au16data, 824, type::Coil),
+           mb_master_machine_type_down = MBUnit(mb_au16data, 825, type::Coil);
 
     void init();
     void poll();

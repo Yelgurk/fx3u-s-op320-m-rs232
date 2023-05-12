@@ -74,6 +74,31 @@ void FXCore::gotoMainScreen() {
     scr_set_op320->setValue(prog_running->getState() || is_task_washing_running ? SCR_MASTER_PAGE_TIME : SCR_MASTER_PAGE);
 }
 
+void FXCore::checkDayFix()
+{
+    if (rtc_general_current->isAnotherDay(rtc_general_last_time_point))
+    {
+        if (prog_running->getState() &&
+            rtc_prog_expected_finish->isBiggerThan(rtc_general_last_time_point) && 
+            rtc_general_current->isBiggerThan(rtc_prog_expected_finish))
+            rtc_prog_expected_finish->clone(rtc_general_current, CloneType::Date);
+
+        if (is_task_washing_running && 
+            rtc_blowing_finish->isBiggerThan(rtc_general_last_time_point) &&
+            rtc_general_current->isBiggerThan(rtc_blowing_finish))
+            rtc_blowing_finish->clone(rtc_general_current, CloneType::Date);
+
+        rtc_general_current->sendToEE(true);
+        auto_prog_presets->newDay();
+    }
+}
+
+void FXCore::setActivityPoint()
+{
+    checkDayFix();
+    rtc_general_last_time_point->clone(rtc_general_current);
+}
+
 /* public */
 void FXCore::init()
 {
@@ -84,9 +109,11 @@ void FXCore::init()
     this->MBDispatcher::init();
     this->EEDispatcher::init();
     this->IODispatcher::init();
+
+    EEDispatcher::ee24c64.checkEECycle(true);
     delay(50);
 
-    
+    machine_type = new SettingUnit(&ee_machine_type_selected, &mb_machine_type, static_cast<uint8_t>(MACHINE_TYPE::COUNT) - 1);
 
     /* task var */
     delay(50);
@@ -250,7 +277,7 @@ void FXCore::init()
     /* op320 buttons trigger bind */
     delay(50);
     mb_comm_stop_proc.addTrigger([this]()->             void { stopAllTasks(); });
-    mb_comm_goto_scr_blowing.addTrigger([this]()->      void { scr_set_op320->setValue(SCR_BLOWING_PAGE); });
+    mb_comm_goto_scr_blowing.addTrigger([this]()->      void { if (machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DM_flow) || machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP_flow)) scr_set_op320->setValue(SCR_BLOWING_PAGE); });
     mb_comm_blow_preset_1.addTrigger([this]()->         void { flowgun_presets->selectPreset(0); });
     mb_comm_blow_preset_2.addTrigger([this]()->         void { flowgun_presets->selectPreset(1); });
     mb_comm_blow_preset_3.addTrigger([this]()->         void { flowgun_presets->selectPreset(2); });
@@ -305,10 +332,12 @@ void FXCore::init()
     });
     mb_master_full_hard_reset.addTrigger([this]()->     void { hardReset(); });
     mb_comm_self_pasteur_start.addTrigger([this]()->    void { taskStartProg(0); });
-    mb_comm_solo_heating_toggle.addTrigger([this]()->   void { taskTryToggleHeating(false); });
-    mb_comm_solo_freezing_toggle.addTrigger([this]()->  void { taskTryToggleHeating(false); });
+    mb_comm_solo_heating_toggle.addTrigger([this]()->   void { taskTryToggleHeating(!is_task_heating_running); });
+    mb_comm_solo_freezing_toggle.addTrigger([this]()->  void { taskTryToggleFreezing(!is_task_freezing_running); });
     mb_comm_blowgun_run_btn.addTrigger([this]()->       void { is_flowing_call = true; });
     mb_comm_goto_scr_master.addTrigger([this]()->       void { gotoMainScreen(); });
+    mb_master_machine_type_up.addTrigger([this]()->     void { stopAllTasks(); machine_type->incValue(); });
+    mb_master_machine_type_down.addTrigger([this]()->   void { stopAllTasks(); machine_type->decValue(); });
 
     /* self check after startup / before giving contorl to plc (tasks) */
     delay(50);
@@ -320,13 +349,15 @@ void FXCore::init()
     delay(50);
     uwTick = 0;
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); readSensors(); });
-    TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); });
+    TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); checkDayFix(); });
     TaskManager::newTask(300,   [this]() -> void { threadMain(); checkAutoStartup(); });
     TaskManager::newTask(500,   [this]() -> void { displayTasksDeadline(); });
     TaskManager::newTask(1000,  [this]() -> void { displayMainInfoVars(); });
     TaskManager::newTask(5000,  [this]() -> void { if (scr_get_op320->getValue() == static_cast<uint8_t>(SCR_HELLO_PAGE)) gotoMainScreen(); });
-    TaskManager::newTask(10000, [this]() -> void {  }); //rtc last point (ee dynamic time) + check exp finish day for fix
+    TaskManager::newTask(10000, [this]() -> void { setActivityPoint(); });
     TaskManager::newTask(30000, [this]() -> void { is_heaters_starters_available = true; });
+    TaskManager::newTask(2 * 60 * 1000, [this]() -> void { EEDispatcher::ee24c64.checkEECycle(false); });
+    TaskManager::newTask(5 * 60 * 1000, [this]() -> void { start_error_displayed_yet = false; });
 
     delay(50);
     scr_set_op320->setValue(SCR_HELLO_PAGE);
@@ -338,6 +369,8 @@ void FXCore::setNewDateTime()
     rtc.setDate(rtc_general_set_new->getDays(), rtc_general_set_new->getMonths(), rtc_general_set_new->getYears());
     rtc.setTime(rtc_general_set_new->getHours(), rtc_general_set_new->getMins(), rtc_general_set_new->getSecs());
     rtc_general_set_new->setZeroDateTime();
+    rtc_general_current->sendToEE(true);
+    rtc_general_last_time_point->clone(rtc_general_current);
 }
 
 void FXCore::stopAllTasks()
@@ -356,87 +389,99 @@ void FXCore::taskTryToggleFlowing()
 {
     is_flowing_call = false;
 
-    if (!flowgun_presets->isWashingSelected())
+    if (machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DM_flow) ||
+        machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP_flow))
     {
-        if (is_task_washing_running)
+        if (!flowgun_presets->isWashingSelected())
         {
-            taskFinishFlowing();
-            delay(500);
-        }
+            if (is_task_washing_running)
+            {
+                taskFinishFlowing();
+                delay(500);
+            }
 
-        io_blowgun_r.write(true);
-
-        delay(60000 * flowgun_presets->getValue() / (master_pump_LM_performance->getValue() * 1000));
-        taskFinishFlowing();
-    }
-    else
-    {
-        if (!is_task_washing_running)
-        {
-            is_task_washing_running = true;
-            rtc_blowing_started->clone(rtc_general_current);
-            rtc_blowing_finish->clone(rtc_general_current);
-            rtc_blowing_finish->addMinutes(flowgun_presets->getValue() / 60);
             io_blowgun_r.write(true);
+
+            delay(60000 * flowgun_presets->getValue() / (master_pump_LM_performance->getValue() * 1000));
+            taskFinishFlowing();
+        }
+        else
+        {
+            if (!is_task_washing_running)
+            {
+                is_task_washing_running = true;
+                rtc_blowing_started->clone(rtc_general_current);
+                rtc_blowing_finish->clone(rtc_general_current);
+                rtc_blowing_finish->addMinutes(flowgun_presets->getValue() / 60);
+                io_blowgun_r.write(true);
+            }
         }
     }
 }
 
 void FXCore::taskTryToggleFreezing(bool turn_on)
 {
-    if (!prog_running->getState() && is_connected_380V)
+    if (machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::PM) ||
+        machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP) ||
+        machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP_flow))
     {
-        is_task_freezing_running = turn_on;
-
-        if (turn_on && is_task_heating_running)
-            taskTryToggleHeating(false);
-
-        if (!is_task_freezing_running && !is_task_heating_running)
+        if (!prog_running->getState() && is_connected_380V)
         {
+            is_task_freezing_running = turn_on;
+
+            if (turn_on && is_task_heating_running)
+                taskTryToggleHeating(false);
+
+            if (!is_task_freezing_running && !is_task_heating_running)
+            {
+                io_heater_r.write(false);
+                io_water_jacket_r.write(false);
+                taskToggleMixer(false);
+            }
+        }
+        else if (!is_connected_380V && turn_on) 
+        {
+            is_task_freezing_running = false;
             io_heater_r.write(false);
             io_water_jacket_r.write(false);
             taskToggleMixer(false);
-        }
-    }
-    else if (!is_connected_380V && turn_on) 
-    {
-        is_task_freezing_running = false;
-        io_heater_r.write(false);
-        io_water_jacket_r.write(false);
-        taskToggleMixer(false);
 
-        info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
-        scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+            info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
+            scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+        }
     }
 }
 
 void FXCore::taskTryToggleHeating(bool turn_on)
 {
-    if (!prog_running->getState() && is_connected_380V)
+    if (machine_type->getValue() != static_cast<uint8_t>(MACHINE_TYPE::DM_flow))
     {
-        is_task_heating_running = turn_on;
-        if (turn_on && is_task_freezing_running)
-            taskTryToggleFreezing(false);
-
-        if (!turn_on)
-            taskHeating(0);
-
-        if (!is_task_heating_running && !is_task_freezing_running)
+        if (!prog_running->getState() && is_connected_380V)
         {
+            is_task_heating_running = turn_on;
+            if (turn_on && is_task_freezing_running)
+                taskTryToggleFreezing(false);
+
+            if (!turn_on)
+                taskHeating(0);
+
+            if (!is_task_heating_running && !is_task_freezing_running)
+            {
+                io_heater_r.write(false);
+                io_water_jacket_r.write(false);
+                taskToggleMixer(false);
+            }
+        }
+        else if (!is_connected_380V && turn_on) 
+        {
+            is_task_heating_running = false;
             io_heater_r.write(false);
             io_water_jacket_r.write(false);
             taskToggleMixer(false);
-        }
-    }
-    else if (!is_connected_380V && turn_on) 
-    {
-        is_task_heating_running = false;
-        io_heater_r.write(false);
-        io_water_jacket_r.write(false);
-        taskToggleMixer(false);
 
-        info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
-        scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+            info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
+            scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+        }
     }
 }
 
@@ -450,62 +495,65 @@ void FXCore::taskToggleMixer(bool turn_on)
 
 bool FXCore::taskStartProg(uint8_t pasteur_preset)
 {
-    if (!is_connected_380V)
+    if (machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP) ||
+        machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP_flow) ||
+        machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::PM))
     {
-        info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
-        if (!start_error_displayed_yet)
-            scr_set_op320->setValue(SCR_ERROR_NOTIFY);
-        start_error_displayed_yet = true;
-        return false;
+        if (!is_connected_380V)
+        {
+            info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
+            if (!start_error_displayed_yet)
+                scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+            start_error_displayed_yet = true;
+            return false;
+        }
+
+        if (prog_running->getState())
+            return false;
+        else
+            stopAllTasks();
+
+        start_error_displayed_yet = false;
+        prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
+        prog_freezing_part_finished->setValue(0);
+        prog_heating_part_finished->setValue(0);
+        prog_preset_selected->setValue(pasteur_preset);
+        prog_jacket_filled->setValue(0);
+        prog_running->setValue(1);
+
+        gotoMainScreen();
+        
+        rtc_prog_pasteur_started->clone(rtc_general_current);
+        rtc_prog_finished->setZeroDateTime();
+        rtc_prog_expected_finish->clone(rtc_general_current);
+
+        if (prog_preset_selected->getValue() == 0)
+        {
+            prog_pasteur_tempC = self_prog_pasteur_tempC->getValue();
+            prog_heating_tempC = self_prog_heating_tempC->getValue();
+            prog_freezing_tempC = self_prog_freezing_tempC->getValue();
+            prog_need_in_freezing->setValue(self_prog_mode->getValue() > 0 ? 1 : 0);
+            prog_need_in_heating->setValue(self_prog_mode->getValue() > 1 ? 1 : 0);
+            rtc_prog_expected_finish->addMinutes(self_prog_duration_mm->getValue());
+        }
+        else
+        {
+            uint8_t duration = 0;
+            auto_prog_presets->startPreset(
+                prog_preset_selected->getValue() - 1,
+                prog_pasteur_tempC,
+                prog_heating_tempC,
+                prog_freezing_tempC,
+                duration
+                );
+            prog_need_in_freezing->setValue(1);
+            prog_need_in_heating->setValue(1);
+            rtc_prog_expected_finish->addMinutes(duration);
+        }
+
+        return true;
     }
-
-    if (prog_running->getState())
-        return false;
-    else
-        stopAllTasks();
-
-    start_error_displayed_yet = false;
-    prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
-    prog_freezing_part_finished->setValue(0);
-    prog_heating_part_finished->setValue(0);
-    prog_preset_selected->setValue(pasteur_preset);
-    prog_jacket_filled->setValue(0);
-    prog_running->setValue(1);
-
-    gotoMainScreen();
-    
-    rtc_prog_pasteur_started->clone(rtc_general_current);
-    rtc_prog_finished->setZeroDateTime();
-    rtc_prog_expected_finish->clone(rtc_general_current);
-
-    if (prog_preset_selected->getValue() == 0)
-    {
-        prog_pasteur_tempC = self_prog_pasteur_tempC->getValue();
-        prog_heating_tempC = self_prog_heating_tempC->getValue();
-        prog_freezing_tempC = self_prog_freezing_tempC->getValue();
-        prog_need_in_freezing->setValue(self_prog_mode->getValue() > 0 ? 1 : 0);
-        prog_need_in_heating->setValue(self_prog_mode->getValue() > 1 ? 1 : 0);
-        rtc_prog_expected_finish->addMinutes(self_prog_duration_mm->getValue());
-    }
-    else
-    {
-        uint8_t duration = 0;
-        auto_prog_presets->startPreset(
-            prog_preset_selected->getValue() - 1,
-            prog_pasteur_tempC,
-            prog_heating_tempC,
-            prog_freezing_tempC,
-            duration
-            );
-        prog_need_in_freezing->setValue(1);
-        prog_need_in_heating->setValue(1);
-        rtc_prog_expected_finish->addMinutes(duration);
-    }
-    
-    /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-    /* here rtc last point (private f) */
-
-    return true;
+    return false;
 }
 
 void FXCore::taskPauseProg(OP320_ERROR flag)
@@ -840,6 +888,29 @@ void FXCore::displayOP320States()
 
 void FXCore::hardReset()
 {
+    stopAllTasks();
     ee_hard_reset_value_setted.writeEE(1);
-    /* here set default params */
+    rtc.setTime(8, 0, 0);
+    rtc.setDate(12, 5, 23);
+    rtc_general_current->setRealTime();
+    rtc_general_current->sendToEE(true);
+    rtc_general_last_time_point->clone(rtc_general_current);
+    solo_heating_tempC->setValue(45);
+    solo_freezing_tempC->setValue(15);
+    calibration_flowgun_dope_dose->setValue(0);
+    self_prog_pasteur_tempC->setValue(65);
+    self_prog_heating_tempC->setValue(45);
+    self_prog_freezing_tempC->setValue(15);
+    self_prog_duration_mm->setValue(30);
+    self_prog_mode->setValue(0);
+    master_water_saving_toggle->setValue(1);
+    master_hysteresis_toggle->setValue(1);
+    master_hysteresis_tempC->setValue(2);
+    master_pump_LM_performance->setValue(38);
+    master_4ma_negative_limit->setValue(50);
+    master_20ma_positive_limit->setValue(200);
+    flowgun_presets->setDefault();
+    flowgun_presets->selectPreset(0);
+    auto_prog_presets->setDefault();
+    auto_prog_presets->selectPreset(0);
 }

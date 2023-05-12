@@ -10,7 +10,7 @@
 
 class EEDispatcher
 {
-private:
+protected:
     EEPROM ee24c64;
 
 public:
@@ -99,11 +99,12 @@ public:
            ee_proc_finished_MM = EEUnit(0x0047, &ee24c64, false),
            ee_proc_finished_YY = EEUnit(0x0048, &ee24c64, false),
            ee_proc_finished_flag = EEUnit(0x0049, &ee24c64, false),
-           ee_hard_reset_value_setted = EEUnit(0x004A, &ee24c64, false),
+           ee_machine_type_selected = EEUnit(0x004A, &ee24c64, false),
+           ee_hard_reset_value_setted = EEUnit(0x004B, &ee24c64, false),
 
-           ee_dynamic_rtc_curr_hh = EEUnit(0x004B, &ee24c64, false, ee24c64.getSectorStartAddr()),
-           ee_dynamic_rtc_curr_mm = EEUnit(0x004C, &ee24c64, false, ee24c64.getSectorStartAddr()),
-           ee_dynamic_rtc_curr_ss = EEUnit(0x004D, &ee24c64, true, ee24c64.getSectorStartAddr());
+           ee_dynamic_rtc_curr_hh = EEUnit(0x004C, &ee24c64, false, ee24c64.getSectorStartAddr()),
+           ee_dynamic_rtc_curr_mm = EEUnit(0x004D, &ee24c64, false, ee24c64.getSectorStartAddr()),
+           ee_dynamic_rtc_curr_ss = EEUnit(0x004E, &ee24c64, true, ee24c64.getSectorStartAddr());
             
     bool init();
 };
