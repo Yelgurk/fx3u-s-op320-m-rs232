@@ -30,7 +30,7 @@ public:
     TimeUnit(bool into_ee_after_edit);
     void setEEPointer(EEUnit* pointer, PointerType type);
     void setMBPointer(MBUnit* pointer, PointerType type);
-    void clone(TimeObj parent);
+    void clone(TimeObj *parent);
     void setRealTime();
     void setDateTime(uint8_t hours, uint8_t mionutes, uint8_t days, uint8_t months, uint8_t years);
     void setDate(uint8_t days, uint8_t months, uint8_t years);

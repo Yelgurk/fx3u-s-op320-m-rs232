@@ -30,7 +30,7 @@ void TimeUnit::setMBPointer(MBUnit* pointer, PointerType type)
     }
 }
 
-void TimeUnit::clone(TimeObj parent)
+void TimeUnit::clone(TimeObj *parent)
 {
     this->TimeObj::clone(parent);
     sendToMB();

@@ -16,7 +16,7 @@ private:
     uint8_t display_split = 1;
 
 public:
-    SettingUnit(EEUnit *ee_var_pointer, MBUnit *mb_var_pointer, uint8_t max_limit = 0, uint8_t display_scale = 1);
+    SettingUnit(EEUnit *ee_var_pointer, MBUnit *mb_var_pointer, uint8_t max_limit = 0, uint8_t display_scale = 1, bool update = true);
     void changeEEpointer(EEUnit *ee_var_pointer);
     void setScale(uint8_t display_scale);
     void setSplit(uint8_t display_split);

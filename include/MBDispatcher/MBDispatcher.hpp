@@ -7,7 +7,7 @@
 #ifndef MBDispatcher_hpp
 #define MBDispatcher_hpp
 
-#define COMM_COUNT 37
+#define COMM_COUNT 38
 
 class MBDispatcher
 {
@@ -110,7 +110,8 @@ public:
            mb_comm_solo_heating_toggle = MBUnit(mb_au16data, 819, type::Coil),
            mb_comm_solo_freezing_toggle = MBUnit(mb_au16data, 820, type::Coil),
            mb_comm_blowgun_run_btn = MBUnit(mb_au16data, 821, type::Coil),
-           mb_comm_goto_scr_blowing = MBUnit(mb_au16data, 822, type::Coil);
+           mb_comm_goto_scr_blowing = MBUnit(mb_au16data, 822, type::Coil),
+           mb_comm_goto_scr_master = MBUnit(mb_au16data, 823, type::Coil);
 
     void init();
     void poll();

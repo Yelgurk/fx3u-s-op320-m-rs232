@@ -1,13 +1,15 @@
 #include "../include/Core/SettingUnit.hpp"
 
-SettingUnit::SettingUnit(EEUnit *ee_var_pointer, MBUnit *mb_var_pointer, uint8_t max_limit, uint8_t display_scale)
+SettingUnit::SettingUnit(EEUnit *ee_var_pointer, MBUnit *mb_var_pointer, uint8_t max_limit, uint8_t display_scale, bool update)
 {
     this->ee_var_pointer = ee_var_pointer;
     this->mb_var_pointer = mb_var_pointer;
     this->max_limit = max_limit;
     this->display_scale = display_scale;
-
-    refreshValue();
+    
+    delay(2);
+    if (update)
+        refreshValue();
 }
 
 void SettingUnit::changeEEpointer(EEUnit *ee_var_pointer)
@@ -28,14 +30,15 @@ void SettingUnit::setSplit(uint8_t display_split) {
 
 void SettingUnit::displayValue()
 {
+    delay(2);
     if (mb_var_pointer)
     {
         if (display_split <= 1)
-            mb_var_pointer->writeValue((uint16_t)((uint16_t)this->workable_value * (uint16_t)this->display_scale));
+            mb_var_pointer->writeValue(static_cast<uint16_t>(this->workable_value * this->display_scale));
         else
         {
             uint16_t final_value = (uint16_t)this->workable_value * (uint16_t)this->display_scale;
-            mb_var_pointer->writeValue((uint16_t)((display_split == 60 ? final_value / display_split * 100 : final_value / display_split) + (final_value % display_split)));
+            mb_var_pointer->writeValue(static_cast<uint16_t>((display_split == 60 ? final_value / display_split * 100 : final_value / display_split) + (final_value % display_split)));
         }
     }
 }
@@ -47,18 +50,24 @@ void SettingUnit::setValueByModbus() {
 void SettingUnit::setValue(uint8_t value)
 {
     this->workable_value = (max_limit == 0 && value <= 255) || value <= max_limit ? value : (max_limit == 0 ? 255 : max_limit);
+    
+    delay(2);
     acceptNewValue();
 }
 
 void SettingUnit::acceptNewValue()
 {
     if (ee_var_pointer) ee_var_pointer->writeEE(this->workable_value);
+    
+    delay(2);
     refreshValue();
 }
 
 void SettingUnit::refreshValue()
 {
     if (ee_var_pointer) ee_var_pointer->readEE(&this->workable_value);
+
+    delay(2);
     displayValue();
 }
 

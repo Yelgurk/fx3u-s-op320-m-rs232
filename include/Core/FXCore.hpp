@@ -55,7 +55,8 @@ private:
     /* tasks var */
     bool is_task_freezing_running = false,
          is_task_heating_running = false,
-         is_task_washing_running = false;
+         is_task_washing_running = false,
+         start_error_displayed_yet = false;
     uint8_t prog_pasteur_tempC = 0,
             prog_heating_tempC = 0,
             prog_freezing_tempC = 0;
@@ -110,9 +111,10 @@ private:
     bool checkIsProgWasRunned();
     void displayMainInfoVars();
     void displayTasksDeadline();
+    void gotoMainScreen();
 
 public:
-    FXCore();
+    void init();
     void setNewDateTime();
     void stopAllTasks();
     void taskTryToggleFlowing();

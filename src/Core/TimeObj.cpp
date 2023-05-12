@@ -24,14 +24,14 @@ uint8_t TimeObj::getYears() {
     return this->years;
 }
 
-void TimeObj::clone(TimeObj &parent)
+void TimeObj::clone(TimeObj *parent)
 {
-    this->seconds = parent.seconds;
-    this->minutes = parent.minutes;
-    this->hours = parent.hours;
-    this->days = parent.days;
-    this->months = parent.months;
-    this->years = parent.years;
+    this->seconds = parent->seconds;
+    this->minutes = parent->minutes;
+    this->hours = parent->hours;
+    this->days = parent->days;
+    this->months = parent->months;
+    this->years = parent->years;
 }
 
 void TimeObj::addMinutes(uint8_t minutes)
@@ -43,40 +43,50 @@ void TimeObj::addMinutes(uint8_t minutes)
     this->days += hours / 24;
     this->hours %= 24;
 
-    this->months += days / IN_MONTH + 1;
-    this->days %= IN_MONTH + 1;
+    this->months += days / (IN_MONTH + 1);
+    this->days %= (IN_MONTH + 1);
+    this->days = this->days == 0 ? 1 : this->days;
     
     this->years += months / 13;
     this->months %= 13;
+    this->months = this->months == 0 ? 1 : this->months;
 }
 
-bool TimeObj::isAnotherDay(TimeObj &reference) {
-    return days != reference.days || months != reference.months || years != reference.years ? true : false;
+bool TimeObj::isAnotherDay(TimeObj *reference) {
+    return days != reference->days || months != reference->months || years != reference->years ? true : false;
 }
 
-bool TimeObj::isBiggerThan(TimeObj &reference, bool relative_today) {
+bool TimeObj::isBiggerThan(TimeObj *reference, bool relative_today) {
     return getDiffMin(reference, relative_today) > 0 ? true : false;
 }
 
-bool TimeObj::isTimeEqual(TimeObj &reference) {
-    return this->minutes == reference.minutes && this->hours == reference.hours ? true : false;
+bool TimeObj::isTimeEqual(TimeObj *reference) {
+    return this->minutes == reference->minutes && this->hours == reference->hours ? true : false;
 }
 
-uint16_t TimeObj::getDiffMin(TimeObj &reference, bool relative_today)
+uint32_t TimeObj::getDiffMin(TimeObj *reference, bool relative_today)
 {
-    uint64_t THIS = hours * 60 + minutes +
-                    relative_today ? 0 :
-                    (years * IN_YEAR * 24 * 60) +
-                    (months * IN_MONTH * 24 * 60) +
-                    (days * 24 * 60);
+    uint32_t current = (uint32_t)this->hours * 60 + (uint32_t)this->minutes +
+                ((uint32_t)relative_today ? 0 :
+                ((uint32_t)this->years * (uint32_t)IN_YEAR * 24 * 60) +
+                ((uint32_t)this->months * (uint32_t)IN_MONTH * 24 * 60) +
+                ((uint32_t)this->days * 24 * 60));
                     
 
-    uint64_t Ref = reference.hours * 60 + reference.minutes +
-                   relative_today ? 0 :
-                   (reference.years * 365 * 24 * 60) +
-                   (reference.months * 31 * 24 * 60) +
-                   (reference.days * 24 * 60);
+    uint32_t refDT = (uint32_t)reference->hours * 60 + (uint32_t)reference->minutes +
+                ((uint32_t)relative_today ? 0 :
+                ((uint32_t)reference->years * (uint32_t)IN_YEAR * 24 * 60) +
+                ((uint32_t)reference->months * (uint32_t)IN_MONTH * 24 * 60) +
+                ((uint32_t)reference->days * 24 * 60));
 
-    return THIS > Ref ? THIS - Ref : 0;
+    return current > refDT ? current - refDT : 0;
 }
 
+uint32_t TimeObj::getTotalMin(bool relative_today)
+{
+    return  (uint32_t)this->hours * 60 + (uint32_t)this->minutes +
+                ((uint32_t)relative_today ? 0 :
+                ((uint32_t)this->years * (uint32_t)IN_YEAR * 24 * 60) +
+                ((uint32_t)this->months * (uint32_t)IN_MONTH * 24 * 60) +
+                ((uint32_t)this->days * 24 * 60));
+}

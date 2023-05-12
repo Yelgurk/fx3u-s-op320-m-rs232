@@ -4,7 +4,7 @@
 #ifndef TimeObj_hpp
 #define TimeObj_hpp
 
-#define IN_YEAR 365 // calculation crutch
+#define IN_YEAR 372 // calculation crutch
 #define IN_MONTH 31 // calculation crutch
 
 class TimeObj
@@ -25,12 +25,13 @@ public:
     uint8_t getDays();
     uint8_t getMonths();
     uint8_t getYears();
-    void clone(TimeObj &parent);
+    void clone(TimeObj *parent);
     void addMinutes(uint8_t minutes);
-    bool isAnotherDay(TimeObj &reference);
-    bool isBiggerThan(TimeObj &reference, bool relative_today = false);
-    bool isTimeEqual(TimeObj &reference);
-    uint16_t getDiffMin(TimeObj &reference, bool relative_today = false);
+    bool isAnotherDay(TimeObj *reference);
+    bool isBiggerThan(TimeObj *reference, bool relative_today = false);
+    bool isTimeEqual(TimeObj *reference);
+    uint32_t getDiffMin(TimeObj *reference, bool relative_today = false);
+    uint32_t getTotalMin(bool relative_today = false);
 };
 
 #endif

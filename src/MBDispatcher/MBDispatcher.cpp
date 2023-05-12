@@ -39,7 +39,8 @@ void MBDispatcher::init()
         &mb_comm_solo_heating_toggle,
         &mb_comm_solo_freezing_toggle,
         &mb_comm_blowgun_run_btn,
-        &mb_comm_goto_scr_blowing
+        &mb_comm_goto_scr_blowing,
+        &mb_comm_goto_scr_master
     };
 
     this->op320 = Modbus(FX3U_ID, Serial, 0);

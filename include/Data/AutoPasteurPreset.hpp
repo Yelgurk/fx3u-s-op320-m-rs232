@@ -57,14 +57,15 @@ public:
         this->ee_run_on_mm = ee_run_on_mm;
         this->ee_run_toggle = ee_run_toggle;
         this->ee_is_runned_today = ee_is_runned_today;
+        delay(2);
 
-        preset_selected = new SettingUnit(NULL, mb_auto_preset_list, PASTEUR_PRESET_CNT - 1);
-        preset_pasteur_tempC = new SettingUnit(NULL, mb_auto_pasteur_tempC);
-        preset_heating_tempC = new SettingUnit(NULL, mb_auto_heating_tempC);
-        preset_freezing_tempC = new SettingUnit(NULL, mb_auto_freezing_tempC);
-        preset_duration_mm = new SettingUnit(NULL, mb_auto_durat_mm);
-        preset_toggle = new SettingUnit(NULL, mb_auto_preset_toggle, 1);
-        preset_runned_today = new SettingUnit(NULL, NULL);
+        preset_selected = new SettingUnit(NULL, mb_auto_preset_list, PASTEUR_PRESET_CNT - 1, 1, false);
+        preset_pasteur_tempC = new SettingUnit(NULL, mb_auto_pasteur_tempC, 1, false);
+        preset_heating_tempC = new SettingUnit(NULL, mb_auto_heating_tempC, 1, false);
+        preset_freezing_tempC = new SettingUnit(NULL, mb_auto_freezing_tempC, 1, false);
+        preset_duration_mm = new SettingUnit(NULL, mb_auto_durat_mm, 1, false);
+        preset_toggle = new SettingUnit(NULL, mb_auto_preset_toggle, 1, 1, false);
+        preset_runned_today = new SettingUnit(NULL, NULL, 1, false);
 
         for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
         {
@@ -76,6 +77,7 @@ public:
             run_rtc_trigger[index]->loadFromEE();
         }
 
+        delay(2);
         selectPreset(0);
     }
 
@@ -112,9 +114,9 @@ public:
     uint8_t isTimeToRunPreset(TimeUnit &current_time)
     {
         for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
-            if (!run_rtc_trigger[index]->isBiggerThan(current_time, true) &&
-                preset_toggle->getValue() == 1 &&
-                preset_runned_today->getValue() == 0)
+            if (!run_rtc_trigger[index]->isBiggerThan(&current_time, true) &&
+                ee_run_toggle[index].readEE() == 1 &&
+                ee_is_runned_today[index].readEE() == 0)
                 return index + 1;
 
         return 0;

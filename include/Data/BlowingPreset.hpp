@@ -43,16 +43,21 @@ private:
             preset_dec_value->setValue(scale_sec_arr[scale_selected]);
             preset_dec_value->setScale(DISPLAY_SCALE_SEC);
         }
+        delay(2);
     }
 
 public:
     BlowingPreset(MBUnit *mb_blowing_preset_list, MBUnit *mb_blowing_volume, MBUnit *mb_blowing_incV, MBUnit *mb_blowing_decV, EEUnit *ee_blowgun_preset_arr)
     {
-        preset_selected = new SettingUnit(NULL, mb_blowing_preset_list, BLOWGUN_PRESET_CNT - 1);
-        preset_value = new SettingUnit(NULL, mb_blowing_volume, 240, DISPLAY_SCALE_VALUE);
-        preset_inc_value = new SettingUnit(NULL, mb_blowing_incV, 0, DISPLAY_SCALE_ML);
-        preset_dec_value = new SettingUnit(NULL, mb_blowing_decV, 0, DISPLAY_SCALE_ML);
-        this->ee_blowgun_preset_arr = ee_blowgun_preset_arr;
+        this->ee_blowgun_preset_arr = ee_blowgun_preset_arr;  
+        delay(2);  
+
+        preset_selected = new SettingUnit(NULL, mb_blowing_preset_list, BLOWGUN_PRESET_CNT - 1, 1, false);
+        preset_value = new SettingUnit(NULL, mb_blowing_volume, 240, DISPLAY_SCALE_VALUE, false);
+        preset_inc_value = new SettingUnit(NULL, mb_blowing_incV, 0, DISPLAY_SCALE_ML, false);
+        preset_dec_value = new SettingUnit(NULL, mb_blowing_decV, 0, DISPLAY_SCALE_ML, false);
+        
+        delay(2);
         selectPreset(preset_selected->getValue());
     }
 
@@ -61,6 +66,8 @@ public:
         preset_selected->setValue(index);
         preset_value->changeEEpointer(&ee_blowgun_preset_arr[preset_selected->getValue()]);
         preset_value->setSplit(preset_selected->getValue() < BLOWGUN_PRESET_CNT - 1 ? 1 : DISPLAY_SPLIT_SEC);
+
+        delay(2);
         displaySelectedScaler();
     }
 

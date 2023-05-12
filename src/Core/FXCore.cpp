@@ -14,7 +14,7 @@ bool FXCore::checkIsProgWasRunned()
     {
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
         {
-            if (rtc_general_current->getDiffMin(*rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffMin(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
             {
                 taskFinishProg(!is_water_in_jacket ? FINISH_FLAG::WaterJacketError : FINISH_FLAG::Power380vError);
                 return false;
@@ -22,15 +22,15 @@ bool FXCore::checkIsProgWasRunned()
         }
         else if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurRunning))
         {
-            if (rtc_general_current->getDiffMin(*rtc_general_last_time_point) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffMin(rtc_general_last_time_point) >= PASTEUR_AWAIT_LIMIT_MM)
             {
                 taskFinishProg(FINISH_FLAG::Power380vError);
                 return false;
             }
             else
             {
-                uint8_t duration = rtc_prog_expected_finish->getDiffMin(*rtc_general_last_time_point);
-                rtc_prog_expected_finish->clone(*rtc_general_current);
+                uint8_t duration = rtc_prog_expected_finish->getDiffMin(rtc_general_last_time_point);
+                rtc_prog_expected_finish->clone(rtc_general_current);
                 rtc_prog_expected_finish->addMinutes(duration);
             }
         }
@@ -63,30 +63,33 @@ void FXCore::displayMainInfoVars()
 
 void FXCore::displayTasksDeadline()
 {
+    scr_get_op320->setValueByModbus();
     if ((prog_running->getState() || is_task_washing_running) && scr_get_op320->getValue() == SCR_MASTER_PAGE)
-    {
-        displayOP320States();
         scr_set_op320->setValue(SCR_MASTER_PAGE_TIME);
-    }
-
-    if (!(prog_running->getState() || is_task_washing_running) && scr_get_op320->getValue() == SCR_MASTER_PAGE_TIME)
-    {
-        displayOP320States();
+    else if (!(prog_running->getState() || is_task_washing_running) && scr_get_op320->getValue() == SCR_MASTER_PAGE_TIME)
         scr_set_op320->setValue(SCR_MASTER_PAGE);
-    }
+}
+
+void FXCore::gotoMainScreen() {
+    scr_set_op320->setValue(prog_running->getState() || is_task_washing_running ? SCR_MASTER_PAGE_TIME : SCR_MASTER_PAGE);
 }
 
 /* public */
-FXCore::FXCore()
+void FXCore::init()
 {
+    rtc.setClockSource(STM32RTC::LSE_CLOCK);
+    rtc.begin();
+    delay(50);
+
     this->MBDispatcher::init();
     this->EEDispatcher::init();
     this->IODispatcher::init();
+    delay(50);
 
-    rtc.setClockSource(STM32RTC::LSE_CLOCK);
-    rtc.begin();
+    
 
     /* task var */
+    delay(50);
     machine_state = new SettingUnit(NULL, NULL, static_cast<uint8_t>(MACHINE_STATE::COUNT));
     prog_running = new SettingUnit(&ee_proc_pasteur_running, NULL, 1);
     prog_state = new SettingUnit(&ee_proc_pasteur_state, NULL, static_cast<uint8_t>(PROG_STATE::COUNT) - 1);
@@ -105,6 +108,7 @@ FXCore::FXCore()
     rtc_blowing_started = new TimeUnit(false);
     rtc_blowing_finish = new TimeUnit(false);
 
+    delay(50);
     rtc_prog_pasteur_started->setEEPointer(&ee_proc_started_hh, PointerType::Hours);
     rtc_prog_pasteur_started->setEEPointer(&ee_proc_started_mm, PointerType::Minutes);
     rtc_prog_pasteur_started->setEEPointer(&ee_proc_started_DD, PointerType::Days);
@@ -148,8 +152,9 @@ FXCore::FXCore()
     rtc_blowing_finish->setMBPointer(&mb_proc_end_mm, PointerType::Minutes);
 
     /* configs */
-    scr_set_op320 = new SettingUnit(NULL, &mb_set_op320_scr);
-    scr_get_op320 = new SettingUnit(NULL, &mb_get_op320_scr);
+    delay(50);
+    scr_set_op320 = new SettingUnit(NULL, &mb_set_op320_scr, 0, 1, false);
+    scr_get_op320 = new SettingUnit(NULL, &mb_get_op320_scr, 0, 1, false);
 
     info_main_liq_tempC = new SettingUnit(NULL, &mb_liq_tempC);
     info_main_batt_charge = new SettingUnit(NULL, &mb_batt_charge);
@@ -178,6 +183,7 @@ FXCore::FXCore()
     master_4ma_negative_limit = new SettingUnit(&ee_master_4ma_adc_value, &mb_4ma_adc_limit);
     master_20ma_positive_limit = new SettingUnit(&ee_master_20ma_adc_value, &mb_20ma_adc_limit);
     
+    delay(50);
     flowgun_presets = new BlowingPreset(
         &mb_blowing_preset_list,
         &mb_blowing_volume,
@@ -186,6 +192,7 @@ FXCore::FXCore()
         ee_blowgun_preset_arr
     );
     
+    delay(50);
     auto_prog_presets = new AutoPasteurPreset(
         ee_auto_pasteur_tempC_arr,
         ee_auto_heating_tempC_arr,
@@ -209,6 +216,7 @@ FXCore::FXCore()
     rtc_general_last_time_point = new TimeUnit(true);
     rtc_general_set_new = new TimeUnit(false);
 
+    delay(50);
     rtc_general_current->setMBPointer(&mb_rtc_ss, PointerType::Seconds);
     rtc_general_current->setMBPointer(&mb_rtc_mm, PointerType::Minutes);
     rtc_general_current->setMBPointer(&mb_rtc_hh, PointerType::Hours);
@@ -240,6 +248,7 @@ FXCore::FXCore()
     rtc_general_set_new->setZeroDateTime();
 
     /* op320 buttons trigger bind */
+    delay(50);
     mb_comm_stop_proc.addTrigger([this]()->             void { stopAllTasks(); });
     mb_comm_goto_scr_blowing.addTrigger([this]()->      void { scr_set_op320->setValue(SCR_BLOWING_PAGE); });
     mb_comm_blow_preset_1.addTrigger([this]()->         void { flowgun_presets->selectPreset(0); });
@@ -299,20 +308,28 @@ FXCore::FXCore()
     mb_comm_solo_heating_toggle.addTrigger([this]()->   void { taskTryToggleHeating(false); });
     mb_comm_solo_freezing_toggle.addTrigger([this]()->  void { taskTryToggleHeating(false); });
     mb_comm_blowgun_run_btn.addTrigger([this]()->       void { is_flowing_call = true; });
+    mb_comm_goto_scr_master.addTrigger([this]()->       void { gotoMainScreen(); });
 
     /* self check after startup / before giving contorl to plc (tasks) */
+    delay(50);
     readSensors();
     checkIsHardReseted();
     checkIsProgWasRunned();
 
     /* tasks: millis, func */
+    delay(50);
+    uwTick = 0;
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); readSensors(); });
     TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); });
-    TaskManager::newTask(300,   [this]() -> void { displayTasksDeadline(); });
-    TaskManager::newTask(400,   [this]() -> void { threadMain(); });
+    TaskManager::newTask(300,   [this]() -> void { threadMain(); checkAutoStartup(); });
+    TaskManager::newTask(500,   [this]() -> void { displayTasksDeadline(); });
     TaskManager::newTask(1000,  [this]() -> void { displayMainInfoVars(); });
+    TaskManager::newTask(5000,  [this]() -> void { if (scr_get_op320->getValue() == static_cast<uint8_t>(SCR_HELLO_PAGE)) gotoMainScreen(); });
     TaskManager::newTask(10000, [this]() -> void {  }); //rtc last point (ee dynamic time) + check exp finish day for fix
     TaskManager::newTask(30000, [this]() -> void { is_heaters_starters_available = true; });
+
+    delay(50);
+    scr_set_op320->setValue(SCR_HELLO_PAGE);
 }
 
 void FXCore::setNewDateTime()
@@ -357,8 +374,8 @@ void FXCore::taskTryToggleFlowing()
         if (!is_task_washing_running)
         {
             is_task_washing_running = true;
-            rtc_blowing_started->clone(*rtc_general_current);
-            rtc_blowing_finish->clone(*rtc_general_current);
+            rtc_blowing_started->clone(rtc_general_current);
+            rtc_blowing_finish->clone(rtc_general_current);
             rtc_blowing_finish->addMinutes(flowgun_presets->getValue() / 60);
             io_blowgun_r.write(true);
         }
@@ -436,7 +453,9 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
     if (!is_connected_380V)
     {
         info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
-        scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+        if (!start_error_displayed_yet)
+            scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+        start_error_displayed_yet = true;
         return false;
     }
 
@@ -445,6 +464,7 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
     else
         stopAllTasks();
 
+    start_error_displayed_yet = false;
     prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
     prog_freezing_part_finished->setValue(0);
     prog_heating_part_finished->setValue(0);
@@ -452,11 +472,11 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
     prog_jacket_filled->setValue(0);
     prog_running->setValue(1);
 
-    scr_set_op320->setValue(SCR_MASTER_PAGE_TIME);
+    gotoMainScreen();
     
-    rtc_prog_pasteur_started->clone(*rtc_general_current);
+    rtc_prog_pasteur_started->clone(rtc_general_current);
     rtc_prog_finished->setZeroDateTime();
-    rtc_prog_expected_finish->clone(*rtc_general_current);
+    rtc_prog_expected_finish->clone(rtc_general_current);
 
     if (prog_preset_selected->getValue() == 0)
     {
@@ -494,7 +514,7 @@ void FXCore::taskPauseProg(OP320_ERROR flag)
     {
         prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurPaused));
         rtc_prog_finished->loadFromMB();
-        rtc_prog_pasteur_paused->clone(*rtc_general_current);
+        rtc_prog_pasteur_paused->clone(rtc_general_current);
 
         io_heater_r.write(false);
         io_mixer_r.write(false);
@@ -511,8 +531,8 @@ void FXCore::taskResumeProg()
     if (prog_running->getState())
     {
         prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
-        uint8_t estimated = rtc_prog_expected_finish->getDiffMin(*rtc_prog_pasteur_paused);
-        rtc_prog_expected_finish->clone(*rtc_general_current);
+        uint8_t estimated = rtc_prog_expected_finish->getDiffMin(rtc_prog_pasteur_paused);
+        rtc_prog_expected_finish->clone(rtc_general_current);
         rtc_prog_expected_finish->addMinutes(estimated);
 
         io_mixer_r.write(true);
@@ -529,7 +549,7 @@ void FXCore::taskFinishProg(FINISH_FLAG flag)
         
         taskToggleMixer(false);
         
-        rtc_prog_finished->clone(*rtc_general_current);
+        rtc_prog_finished->clone(rtc_general_current);
 
         if (flag > FINISH_FLAG::UserCall)
         {
@@ -548,7 +568,7 @@ void FXCore::taskFinishProg(FINISH_FLAG flag)
 
 void FXCore::taskFinishFlowing(bool forced)
 {
-    if (forced || (rtc_general_current->isTimeEqual(*rtc_blowing_finish) || rtc_general_current->getDiffMin(*rtc_blowing_finish) > 0))
+    if (forced || rtc_general_current->isTimeEqual(rtc_blowing_finish) || rtc_general_current->isBiggerThan(rtc_blowing_finish))
     {
         is_task_washing_running = false;
         io_blowgun_r.write(false);
@@ -612,7 +632,7 @@ bool FXCore::threadProg()
         }
 
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
-            if (rtc_general_current->getDiffMin(*rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffMin(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
             {
                 taskFinishProg(!is_connected_380V ? FINISH_FLAG::Power380vError : FINISH_FLAG::WaterJacketError);
                 return false;
@@ -645,8 +665,8 @@ bool FXCore::threadProg()
 
         taskHeating(prog_pasteur_tempC);
 
-        if (rtc_general_current->isTimeEqual(*rtc_prog_expected_finish) ||
-            rtc_general_current->getDiffMin(*rtc_prog_expected_finish) > 0)
+        if (rtc_general_current->isTimeEqual(rtc_prog_expected_finish) ||
+            rtc_general_current->isBiggerThan(rtc_prog_expected_finish))
             prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurFinished));
         else
             return true;
@@ -704,7 +724,7 @@ void FXCore::threadMain()
         info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vIn));
         scr_set_op320->setValue(SCR_ERROR_NOTIFY);
     }
-    
+
     if (is_stop_btn_pressed)
         stopAllTasks();
 
@@ -748,7 +768,7 @@ void FXCore::displayOP320States()
 {
     if (!prog_running->getState() &&
         info_main_step->getValue() == static_cast<uint8_t>(OP320_STEP::PasteurFinish) &&
-        rtc_general_current->getDiffMin(*rtc_prog_finished) >= 5 &&
+        rtc_general_current->getDiffMin(rtc_prog_finished) >= 5 &&
         !rtc_prog_finished->isZeroTime())
     {
         info_main_step_show_hide->setValue(0);
