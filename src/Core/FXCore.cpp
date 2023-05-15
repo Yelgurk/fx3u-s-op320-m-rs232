@@ -99,6 +99,29 @@ void FXCore::setActivityPoint()
     rtc_general_last_time_point->clone(rtc_general_current);
 }
 
+void FXCore::callTempCSensor()
+{
+    sensor_call_tempC[sensor_call_index] =
+        (double)io_liquid_temp_s.readAnalog() /
+        (4095 / ((double)master_20ma_positive_limit->getValue() + (double)master_4ma_negative_limit->getValue()))
+        - (double)master_4ma_negative_limit->getValue() - 2.5;
+
+        if (sensor_call_tempC[sensor_call_index] >= master_4ma_negative_limit->getValue())
+            sensor_call_tempC[sensor_call_index] -= master_4ma_negative_limit->getValue();
+        else
+            sensor_call_tempC[sensor_call_index] = 0;
+
+    if (++this->sensor_call_index >= SENSOR_TEMPC_CALL_CNT)    
+    {
+        this->sensor_call_index = 0;
+        double sum = 0;
+        for (uint8_t index = 0; index < SENSOR_TEMPC_CALL_CNT; index++)
+            sum += sensor_call_tempC[index];
+
+        liquid_tempC = (int16_t)(sum / SENSOR_TEMPC_CALL_CNT);
+    }
+}
+
 /* public */
 void FXCore::init()
 {
@@ -352,7 +375,7 @@ void FXCore::init()
     TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); checkDayFix(); });
     TaskManager::newTask(300,   [this]() -> void { threadMain(); checkAutoStartup(); });
     TaskManager::newTask(500,   [this]() -> void { displayTasksDeadline(); });
-    TaskManager::newTask(1000,  [this]() -> void { displayMainInfoVars(); });
+    TaskManager::newTask(1000,  [this]() -> void { callTempCSensor(); displayMainInfoVars(); });
     TaskManager::newTask(5000,  [this]() -> void { if (scr_get_op320->getValue() == static_cast<uint8_t>(SCR_HELLO_PAGE)) gotoMainScreen(); });
     TaskManager::newTask(10000, [this]() -> void { setActivityPoint(); });
     TaskManager::newTask(30000, [this]() -> void { is_heaters_starters_available = true; });
@@ -627,7 +650,6 @@ void FXCore::taskHeating(uint8_t expected_tempC)
 {
     if ((prog_running->getState() || is_task_heating_running))
     {
-        is_heaters_starters_available = false;
         taskToggleMixer(true);
 
         if (!is_water_in_jacket)
@@ -640,6 +662,8 @@ void FXCore::taskHeating(uint8_t expected_tempC)
             else if (is_heaters_starters_available)
                 io_heater_r.write(false);
         }
+
+        is_heaters_starters_available = false;
     }
     else if (is_heaters_starters_available)
     {
@@ -799,17 +823,14 @@ void FXCore::readSensors()
     is_flowing_call = is_flowing_call ? true : io_blowgun_s.readDigital();
     is_mixer_error = io_mixer_crash_s.readDigital();
 
-    batt_chargeV = io_battery_s.readAnalog() / (4095 / 100);
-
+    uint16_t response = io_battery_s.readAnalog();
+    batt_chargeV = response <= SENSOR_CHARGE_MINVAL ? 0 :
+        (response >= SENSOR_CHARGE_MAXVAL ? 100 :
+        ((SENSOR_CHARGE_MAXVAL - response) / (SENSOR_CHARGE_RANGE / 100)));
     mb_batt_charge.writeValue((uint16_t)batt_chargeV);
-    mb_liq_tempC.writeValue((uint16_t)liquid_tempC);
     
     is_connected_380V = io_v380_s.readDigital();
     is_water_in_jacket = io_water_jacket_s.readDigital();
-
-    liquid_tempC = io_liquid_temp_s.readAnalog() /
-        (4095 / (master_20ma_positive_limit->getValue() + master_4ma_negative_limit->getValue())) -
-        master_4ma_negative_limit->getValue();
 }
 
 void FXCore::displayOP320States()

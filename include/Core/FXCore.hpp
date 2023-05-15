@@ -27,6 +27,11 @@
 #define PASTEUR_AWAIT_LIMIT_MM 60
 #define BLOWGUN_PRESET_WASHING 3
 
+#define SENSOR_TEMPC_CALL_CNT 15
+#define SENSOR_CHARGE_MAXVAL 2340
+#define SENSOR_CHARGE_MINVAL (SENSOR_CHARGE_MAXVAL / 26 * 24)
+#define SENSOR_CHARGE_RANGE (SENSOR_CHARGE_MAXVAL - SENSOR_CHARGE_MINVAL)
+
 enum class MACHINE_TYPE  : uint8_t { DMP_flow, DM_flow, DMP, PM, HM, COUNT };
 enum class MACHINE_STATE : uint8_t { Await, Flowing, Heating, Freezing, Pasteurizing, COUNT };
 enum class FINISH_FLAG   : uint8_t { Success, UserCall, MixerError, Power380vError, WaterJacketError, COUNT };
@@ -51,6 +56,8 @@ private:
          is_mixer_error = false;
     int16_t liquid_tempC = 0;
     uint8_t batt_chargeV = 0;
+    double sensor_call_tempC[SENSOR_TEMPC_CALL_CNT] { 0 };
+    uint8_t sensor_call_index = 0;
 
     /* tasks var */
     bool is_task_freezing_running = false,
@@ -114,6 +121,7 @@ private:
     void gotoMainScreen();
     void checkDayFix();
     void setActivityPoint();
+    void callTempCSensor();
 
 public:
     void init();
