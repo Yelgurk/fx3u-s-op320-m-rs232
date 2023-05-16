@@ -28,9 +28,9 @@
 #define BLOWGUN_PRESET_WASHING 3
 
 #define SENSOR_TEMPC_CALL_CNT 15
-#define SENSOR_CHARGE_MAXVAL 2340
-#define SENSOR_CHARGE_MINVAL (SENSOR_CHARGE_MAXVAL / 26 * 24)
-#define SENSOR_CHARGE_RANGE (SENSOR_CHARGE_MAXVAL - SENSOR_CHARGE_MINVAL)
+#define SENSOR_CHARGE_MAXVAL (double)2320
+#define SENSOR_CHARGE_MINVAL (double)(SENSOR_CHARGE_MAXVAL / 26 * 23)
+#define SENSOR_CHARGE_RANGE  (double)(SENSOR_CHARGE_MAXVAL - SENSOR_CHARGE_MINVAL)
 
 enum class MACHINE_TYPE  : uint8_t { DMP_flow, DM_flow, DMP, PM, HM, COUNT };
 enum class MACHINE_STATE : uint8_t { Await, Flowing, Heating, Freezing, Pasteurizing, COUNT };
@@ -50,6 +50,7 @@ private:
     /* sensors var */
     bool is_water_in_jacket = false,
          is_flowing_call = false,
+         is_flowing_uncalled = false,
          is_stop_btn_pressed = false,
          is_connected_380V = false,
          is_heaters_starters_available = false,

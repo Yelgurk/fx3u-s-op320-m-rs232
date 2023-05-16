@@ -357,7 +357,7 @@ void FXCore::init()
     mb_comm_self_pasteur_start.addTrigger([this]()->    void { taskStartProg(0); });
     mb_comm_solo_heating_toggle.addTrigger([this]()->   void { taskTryToggleHeating(!is_task_heating_running); });
     mb_comm_solo_freezing_toggle.addTrigger([this]()->  void { taskTryToggleFreezing(!is_task_freezing_running); });
-    mb_comm_blowgun_run_btn.addTrigger([this]()->       void { is_flowing_call = true; });
+    //mb_comm_blowgun_run_btn.addTrigger([this]()->       void { is_flowing_call = true; });
     mb_comm_goto_scr_master.addTrigger([this]()->       void { gotoMainScreen(); });
     mb_master_machine_type_up.addTrigger([this]()->     void { stopAllTasks(); machine_type->incValue(); });
     mb_master_machine_type_down.addTrigger([this]()->   void { stopAllTasks(); machine_type->decValue(); });
@@ -643,6 +643,9 @@ void FXCore::taskFinishFlowing(bool forced)
     {
         is_task_washing_running = false;
         io_blowgun_r.write(false);
+
+        if (is_flowing_call = io_blowgun_s.readDigital())
+            is_flowing_uncalled = true;
     }
 }
 
@@ -788,7 +791,7 @@ void FXCore::threadMain()
     else
         machine_state->setValue(static_cast<uint8_t>(MACHINE_STATE::Await));
 
-    if (is_flowing_call && !prog_running->getState() && !is_stop_btn_pressed && !is_connected_380V && scr_get_op320->getValue() == SCR_BLOWING_PAGE)
+    if (is_flowing_call && !is_flowing_uncalled && !prog_running->getState() && !is_stop_btn_pressed && !is_connected_380V && scr_get_op320->getValue() == SCR_BLOWING_PAGE)
         taskTryToggleFlowing();
     else if (is_flowing_call && is_connected_380V)
     {
@@ -820,14 +823,15 @@ void FXCore::threadMain()
 void FXCore::readSensors()
 {
     is_stop_btn_pressed = is_stop_btn_pressed ? true : io_stop_btn_s.readDigital();
-    is_flowing_call = is_flowing_call ? true : io_blowgun_s.readDigital();
+    is_flowing_call = io_blowgun_s.readDigital();//is_flowing_call ? true : io_blowgun_s.readDigital();
     is_mixer_error = io_mixer_crash_s.readDigital();
+    if (is_flowing_uncalled && !is_flowing_call)
+        is_flowing_uncalled = false;
 
     uint16_t response = io_battery_s.readAnalog();
     batt_chargeV = response <= SENSOR_CHARGE_MINVAL ? 0 :
         (response >= SENSOR_CHARGE_MAXVAL ? 100 :
-        ((SENSOR_CHARGE_MAXVAL - response) / (SENSOR_CHARGE_RANGE / 100)));
-    mb_batt_charge.writeValue((uint16_t)batt_chargeV);
+        ((SENSOR_CHARGE_RANGE - (SENSOR_CHARGE_MAXVAL - (double)response)) / (SENSOR_CHARGE_RANGE / 100)));
     
     is_connected_380V = io_v380_s.readDigital();
     is_water_in_jacket = io_water_jacket_s.readDigital();
