@@ -24,7 +24,7 @@ private:
 
     /* 0..2 => if (preset_selected < 3) 100ml..500ml/DISPLAY_SCALE || if (preset_selected == 3) 15sec..60sec/DISPLAY_SCALE  */
     uint8_t scale_selected = 0;
-    uint8_t scale_ml_arr[3] { 2, 5, 10 };
+    uint8_t scale_ml_arr[3] { 10, 15, 30 };
     uint8_t scale_sec_arr[3] { 12, 12, 12 };//{ 3, 6, 12 };
 
     void displaySelectedScaler()

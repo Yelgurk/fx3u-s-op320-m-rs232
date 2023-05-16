@@ -14,7 +14,7 @@ bool FXCore::checkIsProgWasRunned()
     {
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
         {
-            if (rtc_general_current->getDiffMin(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffSec(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
             {
                 taskFinishProg(!is_water_in_jacket ? FINISH_FLAG::WaterJacketError : FINISH_FLAG::Power380vError);
                 return false;
@@ -22,14 +22,14 @@ bool FXCore::checkIsProgWasRunned()
         }
         else if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurRunning))
         {
-            if (rtc_general_current->getDiffMin(rtc_general_last_time_point) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffSec(rtc_general_last_time_point) >= PASTEUR_AWAIT_LIMIT_MM)
             {
                 taskFinishProg(FINISH_FLAG::Power380vError);
                 return false;
             }
             else
             {
-                uint8_t duration = rtc_prog_expected_finish->getDiffMin(rtc_general_last_time_point);
+                uint8_t duration = rtc_prog_expected_finish->getDiffSec(rtc_general_last_time_point);
                 rtc_prog_expected_finish->clone(rtc_general_current);
                 rtc_prog_expected_finish->addMinutes(duration);
             }
@@ -602,7 +602,7 @@ void FXCore::taskResumeProg()
     if (prog_running->getState())
     {
         prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
-        uint8_t estimated = rtc_prog_expected_finish->getDiffMin(rtc_prog_pasteur_paused);
+        uint8_t estimated = rtc_prog_expected_finish->getDiffSec(rtc_prog_pasteur_paused);
         rtc_prog_expected_finish->clone(rtc_general_current);
         rtc_prog_expected_finish->addMinutes(estimated);
 
@@ -707,7 +707,7 @@ bool FXCore::threadProg()
         }
 
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
-            if (rtc_general_current->getDiffMin(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffSec(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
             {
                 taskFinishProg(!is_connected_380V ? FINISH_FLAG::Power380vError : FINISH_FLAG::WaterJacketError);
                 return false;
@@ -841,7 +841,7 @@ void FXCore::displayOP320States()
 {
     if (!prog_running->getState() &&
         info_main_step->getValue() == static_cast<uint8_t>(OP320_STEP::PasteurFinish) &&
-        rtc_general_current->getDiffMin(rtc_prog_finished) >= 5 &&
+        rtc_general_current->getDiffSec(rtc_prog_finished) >= 5 &&
         !rtc_prog_finished->isZeroTime())
     {
         info_main_step_show_hide->setValue(0);

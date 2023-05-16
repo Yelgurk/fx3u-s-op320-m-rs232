@@ -32,8 +32,7 @@ public:
     bool isAnotherDay(TimeObj *reference);
     bool isBiggerThan(TimeObj *reference, bool relative_today = false);
     bool isTimeEqual(TimeObj *reference);
-    uint32_t getDiffMin(TimeObj *reference, bool relative_today = false);
-    uint32_t getTotalMin(bool relative_today = false);
+    uint64_t getDiffSec(TimeObj *reference, bool relative_today = false);
 };
 
 #endif
