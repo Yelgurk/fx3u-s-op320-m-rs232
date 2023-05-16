@@ -11,6 +11,7 @@
 #define DISPLAY_SCALE_SEC DISPLAY_SCALE_VALUE
 #define DISPLAY_SCALE_ML 50 
 #define DISPLAY_SPLIT_SEC 60
+#define MAX_VALUE 240
 
 class BlowingPreset
 {
@@ -24,7 +25,7 @@ private:
 
     /* 0..2 => if (preset_selected < 3) 100ml..500ml/DISPLAY_SCALE || if (preset_selected == 3) 15sec..60sec/DISPLAY_SCALE  */
     uint8_t scale_selected = 0;
-    uint8_t scale_ml_arr[3] { 10, 15, 30 };
+    uint8_t scale_ml_arr[3] { 10, 20, 30 };
     uint8_t scale_sec_arr[3] { 12, 12, 12 };//{ 3, 6, 12 };
 
     void displaySelectedScaler()
@@ -53,7 +54,7 @@ public:
         delay(2);  
 
         preset_selected = new SettingUnit(NULL, mb_blowing_preset_list, BLOWGUN_PRESET_CNT - 1, 1, false);
-        preset_value = new SettingUnit(NULL, mb_blowing_volume, 240, DISPLAY_SCALE_VALUE, false);
+        preset_value = new SettingUnit(NULL, mb_blowing_volume, MAX_VALUE, DISPLAY_SCALE_VALUE, false);
         preset_inc_value = new SettingUnit(NULL, mb_blowing_incV, 0, DISPLAY_SCALE_ML, false);
         preset_dec_value = new SettingUnit(NULL, mb_blowing_decV, 0, DISPLAY_SCALE_ML, false);
         
@@ -78,7 +79,7 @@ public:
     }
 
     void incValue() {
-        preset_value->setValue(preset_value->getValue() + preset_inc_value->getValue());
+        preset_value->setValue(MAX_VALUE - preset_inc_value->getValue() > preset_value->getValue() ? preset_inc_value->getValue() + preset_value->getValue() : MAX_VALUE);
     }
 
     void decValue()

@@ -24,6 +24,8 @@
 #define SCR_MASTER_SETTINGS 11
 #define SCR_ERROR_NOTIFY 12
 
+#define HEAT_MM_FOR_1CELSIUS_UP 3
+#define WATER_JACKED_FILL_EST_MM 5
 #define PASTEUR_AWAIT_LIMIT_MM 60
 #define BLOWGUN_PRESET_WASHING 3
 
@@ -38,7 +40,7 @@ enum class FINISH_FLAG   : uint8_t { Success, UserCall, MixerError, Power380vErr
 enum class PROG_STATE    : uint8_t { PasteurRunning, PasteurPaused, PasteurFinished, FreezingFinished, HeatingFinished, CycleFinished, COUNT };
 enum class OP320_PROCESS : uint8_t { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
 enum class OP320_STEP    : uint8_t { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, ErrSolveAwait, COUNT };
-enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, COUNT };
+enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, SlowHeating, COUNT };
 
 class FXCore : protected MBDispatcher, protected IODispatcher, protected EEDispatcher, protected PasswordAccess, public TaskManager
 {
@@ -64,10 +66,12 @@ private:
     bool is_task_freezing_running = false,
          is_task_heating_running = false,
          is_task_washing_running = false,
-         start_error_displayed_yet = false;
+         start_error_displayed_yet = false,
+         heat_error_displayed_yet = false;
     uint8_t prog_pasteur_tempC = 0,
             prog_heating_tempC = 0,
-            prog_freezing_tempC = 0;
+            prog_freezing_tempC = 0,
+            prog_selected_duration_mm = 0;
     SettingUnit *machine_state,
                 *prog_running,
                 *prog_state,
@@ -77,6 +81,7 @@ private:
                 *prog_need_in_heating,
                 *prog_heating_part_finished,
                 *prog_jacket_filled,
+                *prog_pasteur_tempC_reached,
                 *prog_finished_flag;
     TimeUnit    *rtc_prog_pasteur_started,
                 *rtc_prog_pasteur_paused,
@@ -143,6 +148,7 @@ public:
     bool threadProg();
     void threadMain();
     void readSensors();
+    void readWaterInJacket();
     void displayOP320States();
     void hardReset();
 };

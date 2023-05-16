@@ -43,7 +43,7 @@ public:
     void setDay(uint8_t days);
     void setZeroDateTime();
     bool isZeroTime();
-    void addMinutes(uint8_t minutes);
+    void addMinutes(uint64_t minutes);
     void sendToEE(bool static_flag = true);
     void sendToMB();
     void loadFromEE();

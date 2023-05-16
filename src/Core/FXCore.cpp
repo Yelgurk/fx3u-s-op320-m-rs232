@@ -14,7 +14,7 @@ bool FXCore::checkIsProgWasRunned()
     {
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
         {
-            if (rtc_general_current->getDiffSec(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffSec(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM * 60)
             {
                 taskFinishProg(!is_water_in_jacket ? FINISH_FLAG::WaterJacketError : FINISH_FLAG::Power380vError);
                 return false;
@@ -22,16 +22,16 @@ bool FXCore::checkIsProgWasRunned()
         }
         else if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurRunning))
         {
-            if (rtc_general_current->getDiffSec(rtc_general_last_time_point) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffSec(rtc_general_last_time_point) >= PASTEUR_AWAIT_LIMIT_MM * 60)
             {
                 taskFinishProg(FINISH_FLAG::Power380vError);
                 return false;
             }
             else
             {
-                uint8_t duration = rtc_prog_expected_finish->getDiffSec(rtc_general_last_time_point);
+                uint64_t in_await_span_sec = rtc_prog_expected_finish->getDiffSec(rtc_general_last_time_point);
                 rtc_prog_expected_finish->clone(rtc_general_current);
-                rtc_prog_expected_finish->addMinutes(duration);
+                rtc_prog_expected_finish->addMinutes((in_await_span_sec / 60) + 1);
             }
         }
 
@@ -40,13 +40,15 @@ bool FXCore::checkIsProgWasRunned()
             prog_pasteur_tempC = self_prog_pasteur_tempC->getValue();
             prog_heating_tempC = self_prog_heating_tempC->getValue();
             prog_freezing_tempC = self_prog_freezing_tempC->getValue();
+            prog_selected_duration_mm = self_prog_duration_mm->getValue();
         }
         else
             auto_prog_presets->resumePreset(
                 prog_preset_selected->getValue() - 1,
                 prog_pasteur_tempC,
                 prog_heating_tempC,
-                prog_freezing_tempC
+                prog_freezing_tempC,
+                prog_selected_duration_mm
                 );
 
         return true;
@@ -104,7 +106,7 @@ void FXCore::callTempCSensor()
     sensor_call_tempC[sensor_call_index] =
         (double)io_liquid_temp_s.readAnalog() /
         (4095 / ((double)master_20ma_positive_limit->getValue() + (double)master_4ma_negative_limit->getValue()))
-        - (double)master_4ma_negative_limit->getValue() - 2.5;
+        - (double)master_4ma_negative_limit->getValue() - (double)(master_hysteresis_toggle->getState() ? master_hysteresis_tempC->getValue() : 0);
 
         if (sensor_call_tempC[sensor_call_index] >= master_4ma_negative_limit->getValue())
             sensor_call_tempC[sensor_call_index] -= master_4ma_negative_limit->getValue();
@@ -132,14 +134,14 @@ void FXCore::init()
     this->MBDispatcher::init();
     this->EEDispatcher::init();
     this->IODispatcher::init();
+    delay(50);
 
     EEDispatcher::ee24c64.checkEECycle(true);
-    delay(50);
 
     machine_type = new SettingUnit(&ee_machine_type_selected, &mb_machine_type, static_cast<uint8_t>(MACHINE_TYPE::COUNT) - 1);
+    delay(50);
 
     /* task var */
-    delay(50);
     machine_state = new SettingUnit(NULL, NULL, static_cast<uint8_t>(MACHINE_STATE::COUNT));
     prog_running = new SettingUnit(&ee_proc_pasteur_running, NULL, 1);
     prog_state = new SettingUnit(&ee_proc_pasteur_state, NULL, static_cast<uint8_t>(PROG_STATE::COUNT) - 1);
@@ -149,6 +151,7 @@ void FXCore::init()
     prog_need_in_heating = new SettingUnit(&ee_proc_need_in_heating, NULL, 1);
     prog_heating_part_finished = new SettingUnit(&ee_proc_heating_finished, NULL, 1),
     prog_jacket_filled = new SettingUnit(&ee_proc_waterJacket_filled_yet, NULL, 1);
+    prog_pasteur_tempC_reached = new SettingUnit(&ee_proc_pasteurTempC_reached_yet, NULL, 1);
     prog_finished_flag = new SettingUnit(&ee_proc_finished_flag, NULL, static_cast<uint8_t>(FINISH_FLAG::COUNT) - 1);
     
     rtc_prog_pasteur_started = new TimeUnit(true);
@@ -158,7 +161,6 @@ void FXCore::init()
     rtc_blowing_started = new TimeUnit(false);
     rtc_blowing_finish = new TimeUnit(false);
 
-    delay(50);
     rtc_prog_pasteur_started->setEEPointer(&ee_proc_started_hh, PointerType::Hours);
     rtc_prog_pasteur_started->setEEPointer(&ee_proc_started_mm, PointerType::Minutes);
     rtc_prog_pasteur_started->setEEPointer(&ee_proc_started_DD, PointerType::Days);
@@ -200,9 +202,9 @@ void FXCore::init()
 
     rtc_blowing_finish->setMBPointer(&mb_proc_end_hh, PointerType::Hours);
     rtc_blowing_finish->setMBPointer(&mb_proc_end_mm, PointerType::Minutes);
+    delay(50);
 
     /* configs */
-    delay(50);
     scr_set_op320 = new SettingUnit(NULL, &mb_set_op320_scr, 0, 1, false);
     scr_get_op320 = new SettingUnit(NULL, &mb_get_op320_scr, 0, 1, false);
 
@@ -232,8 +234,8 @@ void FXCore::init()
     master_pump_LM_performance = new SettingUnit(&ee_master_pump_perf_lm, &mb_blowing_performance_lm);
     master_4ma_negative_limit = new SettingUnit(&ee_master_4ma_adc_value, &mb_4ma_adc_limit);
     master_20ma_positive_limit = new SettingUnit(&ee_master_20ma_adc_value, &mb_20ma_adc_limit);
-    
     delay(50);
+    
     flowgun_presets = new BlowingPreset(
         &mb_blowing_preset_list,
         &mb_blowing_volume,
@@ -241,8 +243,8 @@ void FXCore::init()
         &mb_blowing_decV,
         ee_blowgun_preset_arr
     );
-    
     delay(50);
+    
     auto_prog_presets = new AutoPasteurPreset(
         ee_auto_pasteur_tempC_arr,
         ee_auto_heating_tempC_arr,
@@ -261,12 +263,12 @@ void FXCore::init()
         &mb_auto_run_rtc_mm,
         &mb_auto_preset_toggle
     );
+    delay(50);
 
     rtc_general_current = new TimeUnit(false);
     rtc_general_last_time_point = new TimeUnit(true);
     rtc_general_set_new = new TimeUnit(false);
 
-    delay(50);
     rtc_general_current->setMBPointer(&mb_rtc_ss, PointerType::Seconds);
     rtc_general_current->setMBPointer(&mb_rtc_mm, PointerType::Minutes);
     rtc_general_current->setMBPointer(&mb_rtc_hh, PointerType::Hours);
@@ -296,9 +298,9 @@ void FXCore::init()
     rtc_general_set_new->setMBPointer(&mb_rtc_new_MM, PointerType::Months);
     rtc_general_set_new->setMBPointer(&mb_rtc_new_YY, PointerType::Years);
     rtc_general_set_new->setZeroDateTime();
+    delay(50);
 
     /* op320 buttons trigger bind */
-    delay(50);
     mb_comm_stop_proc.addTrigger([this]()->             void { stopAllTasks(); });
     mb_comm_goto_scr_blowing.addTrigger([this]()->      void { if (machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DM_flow) || machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP_flow)) scr_set_op320->setValue(SCR_BLOWING_PAGE); });
     mb_comm_blow_preset_1.addTrigger([this]()->         void { flowgun_presets->selectPreset(0); });
@@ -361,15 +363,21 @@ void FXCore::init()
     mb_comm_goto_scr_master.addTrigger([this]()->       void { gotoMainScreen(); });
     mb_master_machine_type_up.addTrigger([this]()->     void { stopAllTasks(); machine_type->incValue(); });
     mb_master_machine_type_down.addTrigger([this]()->   void { stopAllTasks(); machine_type->decValue(); });
+    delay(50);
 
     /* self check after startup / before giving contorl to plc (tasks) */
-    delay(50);
+    for (uint8_t index = 0; index < SENSOR_TEMPC_CALL_CNT; index++)
+    {
+        callTempCSensor();
+        delay(10);
+    }
     readSensors();
+    readWaterInJacket();
     checkIsHardReseted();
     checkIsProgWasRunned();
-
-    /* tasks: millis, func */
     delay(50);
+
+    /* tasks: millis, func. uwTick = 0 => set millis() to 0 (for Arduino) */
     uwTick = 0;
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); readSensors(); });
     TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); checkDayFix(); });
@@ -377,6 +385,7 @@ void FXCore::init()
     TaskManager::newTask(500,   [this]() -> void { displayTasksDeadline(); });
     TaskManager::newTask(1000,  [this]() -> void { callTempCSensor(); displayMainInfoVars(); });
     TaskManager::newTask(5000,  [this]() -> void { if (scr_get_op320->getValue() == static_cast<uint8_t>(SCR_HELLO_PAGE)) gotoMainScreen(); });
+    TaskManager::newTask(5000,  [this]() -> void { readWaterInJacket(); });
     TaskManager::newTask(10000, [this]() -> void { setActivityPoint(); });
     TaskManager::newTask(30000, [this]() -> void { is_heaters_starters_available = true; });
     TaskManager::newTask(2 * 60 * 1000, [this]() -> void { EEDispatcher::ee24c64.checkEECycle(false); });
@@ -425,7 +434,12 @@ void FXCore::taskTryToggleFlowing()
 
             io_blowgun_r.write(true);
 
-            delay(60000 * flowgun_presets->getValue() / (master_pump_LM_performance->getValue() * 1000));
+            uint16_t blowing_dose =
+                flowgun_presets->getValue() +
+                ((double)flowgun_presets->getValue() / (double)((uint16_t)calibration_flowgun_main_dose->getValue() * 1000)) *
+                (double)(calibration_flowgun_main_dose->getValue() * 100);
+
+            delay(60000 * blowing_dose / ((uint16_t)master_pump_LM_performance->getValue() * 1000));
             taskFinishFlowing();
         }
         else
@@ -462,7 +476,7 @@ void FXCore::taskTryToggleFreezing(bool turn_on)
                 taskToggleMixer(false);
             }
         }
-        else if (!is_connected_380V && turn_on) 
+        else if (!prog_running->getState() && !is_connected_380V && turn_on) 
         {
             is_task_freezing_running = false;
             io_heater_r.write(false);
@@ -495,7 +509,7 @@ void FXCore::taskTryToggleHeating(bool turn_on)
                 taskToggleMixer(false);
             }
         }
-        else if (!is_connected_380V && turn_on) 
+        else if (!prog_running->getState() && !is_connected_380V && turn_on) 
         {
             is_task_heating_running = false;
             io_heater_r.write(false);
@@ -537,18 +551,20 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
             stopAllTasks();
 
         start_error_displayed_yet = false;
+        heat_error_displayed_yet = false;
         prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
         prog_freezing_part_finished->setValue(0);
         prog_heating_part_finished->setValue(0);
         prog_preset_selected->setValue(pasteur_preset);
         prog_jacket_filled->setValue(0);
+        prog_pasteur_tempC_reached->setValue(0);
         prog_running->setValue(1);
 
         gotoMainScreen();
-        
+
         rtc_prog_pasteur_started->clone(rtc_general_current);
-        rtc_prog_finished->setZeroDateTime();
         rtc_prog_expected_finish->clone(rtc_general_current);
+        rtc_prog_finished->setZeroDateTime();
 
         if (prog_preset_selected->getValue() == 0)
         {
@@ -557,22 +573,25 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
             prog_freezing_tempC = self_prog_freezing_tempC->getValue();
             prog_need_in_freezing->setValue(self_prog_mode->getValue() > 0 ? 1 : 0);
             prog_need_in_heating->setValue(self_prog_mode->getValue() > 1 ? 1 : 0);
-            rtc_prog_expected_finish->addMinutes(self_prog_duration_mm->getValue());
+            prog_selected_duration_mm = self_prog_duration_mm->getValue();
         }
         else
         {
-            uint8_t duration = 0;
             auto_prog_presets->startPreset(
                 prog_preset_selected->getValue() - 1,
                 prog_pasteur_tempC,
                 prog_heating_tempC,
                 prog_freezing_tempC,
-                duration
+                prog_selected_duration_mm
                 );
             prog_need_in_freezing->setValue(1);
             prog_need_in_heating->setValue(1);
-            rtc_prog_expected_finish->addMinutes(duration);
         }
+        uint16_t heating_up_estimated_mm = (prog_pasteur_tempC > liquid_tempC ? prog_pasteur_tempC - liquid_tempC : 1) * HEAT_MM_FOR_1CELSIUS_UP;
+        rtc_prog_expected_finish->addMinutes(
+            WATER_JACKED_FILL_EST_MM +
+            heating_up_estimated_mm
+        );
 
         return true;
     }
@@ -602,9 +621,9 @@ void FXCore::taskResumeProg()
     if (prog_running->getState())
     {
         prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
-        uint8_t estimated = rtc_prog_expected_finish->getDiffSec(rtc_prog_pasteur_paused);
+        uint64_t estimated_sec = rtc_prog_expected_finish->getDiffSec(rtc_prog_pasteur_paused);
         rtc_prog_expected_finish->clone(rtc_general_current);
-        rtc_prog_expected_finish->addMinutes(estimated);
+        rtc_prog_expected_finish->addMinutes(estimated_sec / 60);
 
         io_mixer_r.write(true);
         io_water_jacket_r.write(false);
@@ -707,7 +726,7 @@ bool FXCore::threadProg()
         }
 
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
-            if (rtc_general_current->getDiffSec(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM)
+            if (rtc_general_current->getDiffSec(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM * 60)
             {
                 taskFinishProg(!is_connected_380V ? FINISH_FLAG::Power380vError : FINISH_FLAG::WaterJacketError);
                 return false;
@@ -734,15 +753,35 @@ bool FXCore::threadProg()
         {
             if (!prog_jacket_filled->getState())
                 prog_jacket_filled->setValue(1);
-            
+
             io_water_jacket_r.write(false);
         }
 
         taskHeating(prog_pasteur_tempC);
 
+        if (liquid_tempC >= prog_pasteur_tempC && !prog_pasteur_tempC_reached->getState())
+        {
+            prog_pasteur_tempC_reached->setValue(1);
+            rtc_prog_expected_finish->clone(rtc_general_current);
+            rtc_prog_expected_finish->addMinutes(prog_selected_duration_mm);
+        }
+
         if (rtc_general_current->isTimeEqual(rtc_prog_expected_finish) ||
             rtc_general_current->isBiggerThan(rtc_prog_expected_finish))
-            prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurFinished));
+        {
+            if (prog_pasteur_tempC_reached->getState())
+                prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurFinished));
+            else
+            {
+                rtc_prog_expected_finish->addMinutes((prog_pasteur_tempC - liquid_tempC) * HEAT_MM_FOR_1CELSIUS_UP);
+                if (!heat_error_displayed_yet)
+                {
+                    heat_error_displayed_yet = true;
+                    info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::SlowHeating));
+                    scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+                }
+            }
+        }
         else
             return true;
     }
@@ -770,7 +809,8 @@ bool FXCore::threadProg()
     }
 
     if ((prog_need_in_freezing->getState() ? prog_freezing_part_finished->getState() : true) &&
-        (prog_need_in_heating->getValue() ? prog_heating_part_finished->getState() : true))
+        (prog_need_in_heating->getValue() ? prog_heating_part_finished->getState() : true) &&
+        prog_state->getValue() >= static_cast<uint8_t>(PROG_STATE::PasteurFinished))
         taskFinishProg(FINISH_FLAG::Success);
 
     return true;
@@ -824,7 +864,6 @@ void FXCore::readSensors()
 {
     is_stop_btn_pressed = is_stop_btn_pressed ? true : io_stop_btn_s.readDigital();
     is_flowing_call = io_blowgun_s.readDigital();//is_flowing_call ? true : io_blowgun_s.readDigital();
-    is_mixer_error = io_mixer_crash_s.readDigital();
     if (is_flowing_uncalled && !is_flowing_call)
         is_flowing_uncalled = false;
 
@@ -834,6 +873,13 @@ void FXCore::readSensors()
         ((SENSOR_CHARGE_RANGE - (SENSOR_CHARGE_MAXVAL - (double)response)) / (SENSOR_CHARGE_RANGE / 100)));
     
     is_connected_380V = io_v380_s.readDigital();
+    is_mixer_error = io_mixer_crash_s.readDigital();
+
+    /* readed by readWaterInJacket() in new task every 5 sec
+    is_water_in_jacket = io_water_jacket_s.readDigital();*/
+}
+
+void FXCore::readWaterInJacket() {
     is_water_in_jacket = io_water_jacket_s.readDigital();
 }
 
@@ -841,7 +887,7 @@ void FXCore::displayOP320States()
 {
     if (!prog_running->getState() &&
         info_main_step->getValue() == static_cast<uint8_t>(OP320_STEP::PasteurFinish) &&
-        rtc_general_current->getDiffSec(rtc_prog_finished) >= 5 &&
+        rtc_general_current->getDiffSec(rtc_prog_finished) >= 5 * 60 &&
         !rtc_prog_finished->isZeroTime())
     {
         info_main_step_show_hide->setValue(0);
@@ -932,8 +978,8 @@ void FXCore::hardReset()
     master_hysteresis_toggle->setValue(1);
     master_hysteresis_tempC->setValue(2);
     master_pump_LM_performance->setValue(38);
-    master_4ma_negative_limit->setValue(50);
-    master_20ma_positive_limit->setValue(200);
+    master_4ma_negative_limit->setValue(60);
+    master_20ma_positive_limit->setValue(250);
     flowgun_presets->setDefault();
     flowgun_presets->selectPreset(0);
     auto_prog_presets->setDefault();

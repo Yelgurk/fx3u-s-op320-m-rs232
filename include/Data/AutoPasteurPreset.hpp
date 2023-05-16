@@ -133,12 +133,13 @@ public:
         if (preset_runned_today->getValue() == 1)
             return false;
 
-        selectPreset(preset_index);
-        pasteur_tempC = preset_pasteur_tempC->getValue();
-        heating_tempC = preset_heating_tempC->getValue();
-        freezing_tempC = preset_freezing_tempC->getValue();
-        preset_duration = preset_duration_mm->getValue();
-        preset_runned_today->setValue(1);
+        resumePreset(
+            preset_index,
+            pasteur_tempC,
+            heating_tempC,
+            freezing_tempC,
+            preset_duration
+        );
 
         return true;
     }
@@ -147,13 +148,15 @@ public:
         uint8_t preset_index,
         uint8_t &pasteur_tempC,
         uint8_t &heating_tempC,
-        uint8_t &freezing_tempC
+        uint8_t &freezing_tempC,
+        uint8_t &preset_duration
     )
     {
         selectPreset(preset_index);
         pasteur_tempC = preset_pasteur_tempC->getValue();
         heating_tempC = preset_heating_tempC->getValue();
         freezing_tempC = preset_freezing_tempC->getValue();
+        preset_duration = preset_duration_mm->getValue();
     }
 
     void newDay()

@@ -1,26 +1,26 @@
 #include "../Include/Core/TimeObj.hpp"
 
-uint8_t TimeObj::getSecs() {
+uint64_t TimeObj::getSecs() {
     return this->seconds;
 }
 
-uint8_t TimeObj::getMins() {
+uint64_t TimeObj::getMins() {
     return this->minutes;
 }
 
-uint8_t TimeObj::getHours() {
+uint64_t TimeObj::getHours() {
     return this->hours;
 }
 
-uint8_t TimeObj::getDays() {
+uint64_t TimeObj::getDays() {
     return this->days;
 }
 
-uint8_t TimeObj::getMonths() {
+uint64_t TimeObj::getMonths() {
     return this->months;
 }
 
-uint8_t TimeObj::getYears() {
+uint64_t TimeObj::getYears() {
     return this->years;
 }
 
@@ -41,7 +41,7 @@ void TimeObj::clone(TimeObj *parent, CloneType type)
     }
 }
 
-void TimeObj::addMinutes(uint8_t minutes)
+void TimeObj::addMinutes(uint64_t minutes)
 {
     this->minutes += minutes % 60;
     this->hours += (minutes / 60) + (this->minutes / 60);
@@ -76,21 +76,21 @@ bool TimeObj::isTimeEqual(TimeObj *reference) {
 uint64_t TimeObj::getDiffSec(TimeObj *reference, bool relative_today)
 {
     uint64_t current =
-                ((uint64_t)this->hours * 60 + (uint64_t)this->minutes +
-                ((uint64_t)relative_today ? 0 :
-                ((uint64_t)this->years * (uint64_t)IN_YEAR * 24 * 60) +
-                ((uint64_t)this->months * (uint64_t)IN_MONTH * 24 * 60) +
-                ((uint64_t)this->days * 24 * 60))) * 60 +
-                (uint64_t)this->seconds;
+                (this->hours * 60 + this->minutes +
+                (relative_today ? 0 :
+                (this->years * (uint64_t)IN_YEAR * 24 * 60) +
+                (this->months * (uint64_t)IN_MONTH * 24 * 60) +
+                (this->days * 24 * 60))) * 60 +
+                this->seconds;
                     
 
     uint64_t refDT =
-                ((uint64_t)reference->hours * 60 + (uint64_t)reference->minutes +
-                ((uint64_t)relative_today ? 0 :
-                ((uint64_t)reference->years * (uint64_t)IN_YEAR * 24 * 60) +
-                ((uint64_t)reference->months * (uint64_t)IN_MONTH * 24 * 60) +
-                ((uint64_t)reference->days * 24 * 60))) * 60 +
-                (uint64_t)reference->seconds;
+                (reference->hours * 60 + reference->minutes +
+                (relative_today ? 0 :
+                (reference->years * (uint64_t)IN_YEAR * 24 * 60) +
+                (reference->months * (uint64_t)IN_MONTH * 24 * 60) +
+                (reference->days * 24 * 60))) * 60 +
+                reference->seconds;
 
     return current > refDT ? current - refDT : 0;
 }

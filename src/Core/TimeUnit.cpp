@@ -136,7 +136,7 @@ bool TimeUnit::isZeroTime()
     else return false;
 }
 
-void TimeUnit::addMinutes(uint8_t minutes)
+void TimeUnit::addMinutes(uint64_t minutes)
 {
     TimeObj::addMinutes(minutes);
     sendToMB();
@@ -168,21 +168,21 @@ void TimeUnit::sendToMB()
 
 void TimeUnit::loadFromEE()
 {
-    if(ee_time_ss_obj) ee_time_ss_obj->readEE(&this->seconds);
-    if(ee_time_mm_obj) ee_time_mm_obj->readEE(&this->minutes);
-    if(ee_time_hh_obj) ee_time_hh_obj->readEE(&this->hours);
-    if(ee_date_DD_obj) ee_date_DD_obj->readEE(&this->days);
-    if(ee_date_MM_obj) ee_date_MM_obj->readEE(&this->months);
-    if(ee_date_YY_obj) ee_date_YY_obj->readEE(&this->years);
+    if(ee_time_ss_obj) this->seconds = ee_time_ss_obj->readEE();
+    if(ee_time_mm_obj) this->minutes = ee_time_mm_obj->readEE();
+    if(ee_time_hh_obj) this->hours = ee_time_hh_obj->readEE();
+    if(ee_date_DD_obj) this->days = ee_date_DD_obj->readEE();
+    if(ee_date_MM_obj) this->months = ee_date_MM_obj->readEE();
+    if(ee_date_YY_obj) this->years = ee_date_YY_obj->readEE();
     sendToMB();
 }
 
 void TimeUnit::loadFromMB()
 {
-    if (mb_time_ss_obj) mb_time_ss_obj->readValue(&this->seconds);
-    if (mb_time_mm_obj) mb_time_mm_obj->readValue(&this->minutes);
-    if (mb_time_hh_obj) mb_time_hh_obj->readValue(&this->hours);
-    if (mb_date_DD_obj) mb_date_DD_obj->readValue(&this->days);
-    if (mb_date_MM_obj) mb_date_MM_obj->readValue(&this->months);
-    if (mb_date_YY_obj) mb_date_YY_obj->readValue(&this->years);
+    if (mb_time_ss_obj) this->seconds = mb_time_ss_obj->readValue();
+    if (mb_time_mm_obj) this->minutes = mb_time_mm_obj->readValue();
+    if (mb_time_hh_obj) this->hours = mb_time_hh_obj->readValue();
+    if (mb_date_DD_obj) this->days = mb_date_DD_obj->readValue();
+    if (mb_date_MM_obj) this->months = mb_date_MM_obj->readValue();
+    if (mb_date_YY_obj) this->years = mb_date_YY_obj->readValue();
 }
