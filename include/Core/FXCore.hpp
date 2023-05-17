@@ -76,6 +76,8 @@ private:
             prog_freezing_tempC = 0,
             prog_selected_duration_mm = 0,
             extra_heating_tempC = 0;
+    uint32_t flowing_current_ms = 0,
+             flowing_trigger_ms = 0;
     SettingUnit *machine_state,
                 *prog_running,
                 *prog_state,
@@ -92,7 +94,6 @@ private:
                 *rtc_prog_finished,
                 *rtc_prog_expected_finish,
                 *rtc_blowing_started,
-                *rtc_blowing_paused,
                 *rtc_blowing_finish;
 
     /* configs */
@@ -147,6 +148,7 @@ public:
     void taskResumeProg();
     void taskFinishProg(FINISH_FLAG flag);
     bool taskFinishFlowing(bool forced = true);
+    void flowgunOff();
     bool taskHeating(uint8_t expected_tempC);
     void taskFreezing(uint8_t expected_tempC);
     void checkAutoStartup();

@@ -144,7 +144,7 @@ void TimeUnit::addMinutes(uint64_t minutes)
 }
 
 void TimeUnit::addSeconds(uint64_t seconds) {
-    TimeObj::addMinutes(seconds);
+    TimeObj::addSeconds(seconds);
     sendToMB();
     sendToEE(into_ee_after_edit);
 }

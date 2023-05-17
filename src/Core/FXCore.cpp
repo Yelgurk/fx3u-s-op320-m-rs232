@@ -159,7 +159,6 @@ void FXCore::init()
     rtc_prog_expected_finish = new TimeUnit(true);
     rtc_prog_finished = new TimeUnit(true);
     rtc_blowing_started = new TimeUnit(false);
-    rtc_blowing_paused = new TimeUnit(false);
     rtc_blowing_finish = new TimeUnit(false);
 
     rtc_prog_pasteur_started->setEEPointer(&ee_proc_started_hh, PointerType::Hours);
@@ -388,7 +387,7 @@ void FXCore::init()
     checkIsProgWasRunned();
     delay(50);
 
-    /* tasks: millis, func. uwTick = 0 => set millis() to 0 (for Arduino) */
+    /* tasks: millis, func. TaskManagerTick(uwTick) = 0 => set millis() to 0 (for Arduino) */
     uwTick = 0;
     TaskManager::newTask(20,    [this]() -> void { poll(); commCheck(); readSensors(); });
     TaskManager::newTask(200,   [this]() -> void { rtc_general_current->setRealTime(); checkDayFix(); });
@@ -400,8 +399,8 @@ void FXCore::init()
     TaskManager::newTask(10000, [this]() -> void { setActivityPoint(); });
     TaskManager::newTask(30000, [this]() -> void { is_heaters_starters_available = true; });
     TaskManager::newTask(60000, [this]() -> void { water_saving_toggle = !water_saving_toggle; });
+    TaskManager::newTask(1 * 60 * 1000, [this]() -> void { start_error_displayed_yet = false; });
     TaskManager::newTask(2 * 60 * 1000, [this]() -> void { EEDispatcher::ee24c64.checkEECycle(false); });
-    TaskManager::newTask(5 * 60 * 1000, [this]() -> void { start_error_displayed_yet = false; });
 
     delay(50);
     scr_set_op320->setValue(SCR_HELLO_PAGE);
@@ -431,35 +430,30 @@ void FXCore::stopAllTasks()
 
 void FXCore::taskTryToggleFlowing()
 {
-    is_flowing_call = false;
-
     if (machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DM_flow) ||
         machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP_flow))
     {
-        is_task_flowing_running = true;
-        rtc_blowing_started->clone(rtc_general_current);
-        rtc_blowing_finish->clone(rtc_general_current);
-
-        if (!flowgun_presets.isWashingSelected() && !is_task_flowing_running)
+        if (!is_task_flowing_running)
         {
-            io_blowgun_r.write(true);
+            rtc_blowing_started->setRealTime();
+            rtc_blowing_finish->setRealTime();
+            FlowgunTick = 0;
+            flowing_current_ms = 0;
 
-            uint16_t flowing_dose =
-                flowgun_presets.getValue() +
-                ((double)flowgun_presets.getValue() / (double)((uint16_t)calibration_flowgun_main_dose->getValue() * 1000)) *
-                (double)(calibration_flowgun_main_dose->getValue() * 100);
-            uint32_t flowing_dose_ms = 60000 * flowing_dose / ((uint16_t)master_pump_LM_performance->getValue() * 1000);
-
-            rtc_blowing_finish->addSeconds(flowing_dose_ms / 1000);
-            io_blowgun_r.write(true);
-        }
-        else
-        {
-            if (!is_task_flowing_running)
+            if (!flowgun_presets.isWashingSelected())
             {
-                rtc_blowing_finish->addMinutes(flowgun_presets.getValue() / 60);
-                io_blowgun_r.write(true);
+                uint16_t flowing_dose =
+                    flowgun_presets.getValue() +
+                    ((double)flowgun_presets.getValue() / (double)((uint16_t)calibration_flowgun_main_dose->getValue() * 1000)) *
+                    (double)(calibration_flowgun_main_dose->getValue() * 100);
+                flowing_trigger_ms = 60000 * flowing_dose / ((uint16_t)master_pump_LM_performance->getValue() * 1000);
             }
+            else if (flowgun_presets.isWashingSelected())
+                flowing_trigger_ms = flowgun_presets.getValue() * 1000;
+
+            is_task_flowing_running = true;
+            rtc_blowing_finish->addSeconds(flowing_trigger_ms / 1000); 
+            io_blowgun_r.write(true);
         }
     }
 }
@@ -670,42 +664,53 @@ bool FXCore::taskFinishFlowing(bool forced)
 {
     if (forced)
     {
-        is_task_flowing_running = false;
-        io_blowgun_r.write(false);
-
-        if (is_flowing_call = io_blowgun_s.readDigital())
-            is_flowing_uncalled = true;
-        
+        flowgunOff();
         return true;
     }
+
+    is_flowing_call = io_blowgun_s.readDigital();
 
     if (is_task_flowing_running && !is_flowing_call && !flowing_task_paused)
     {
+        io_blowgun_r.write(false);
+        flowing_current_ms = FlowgunTick;
         flowing_task_paused = true;
-        rtc_blowing_paused->clone(rtc_general_current);
         return false;
     }
     else if (is_task_flowing_running && !is_flowing_call && flowing_task_paused)
+    {
+        if ((FlowgunTick - flowing_current_ms) / 1000 >= 10)
+            flowgunOff();
+
         return false;
+    }
     else if (is_task_flowing_running && is_flowing_call && flowing_task_paused)
     {
-        uint64_t estimated_sec = rtc_blowing_finish->getDiffSec(rtc_blowing_paused);
-        rtc_blowing_finish->clone(rtc_general_current);
-        rtc_blowing_finish->addSeconds(estimated_sec);
+        FlowgunTick = flowing_current_ms;
+        rtc_blowing_finish->setRealTime();
+        rtc_blowing_finish->addSeconds((flowing_trigger_ms - flowing_current_ms) / 1000);
         flowing_task_paused = false;
+        io_blowgun_r.write(true);
     }
 
-    if (rtc_general_current->isTimeEqual(rtc_blowing_finish) || rtc_general_current->isBiggerThan(rtc_blowing_finish))
+    if (is_task_flowing_running && is_flowing_call && !flowing_task_paused)
+        flowing_current_ms = FlowgunTick;
+
+    if (flowing_current_ms >= flowing_trigger_ms)
     {
-        is_task_flowing_running = false;
-        io_blowgun_r.write(false);
-
-        if (is_flowing_call = io_blowgun_s.readDigital())
-            is_flowing_uncalled = true;
-
+        flowgunOff();
         return true;
     }
     return false;
+}
+
+void FXCore::flowgunOff()
+{
+    is_task_flowing_running = false;
+    io_blowgun_r.write(false);
+
+    if (is_flowing_call = io_blowgun_s.readDigital())
+        is_flowing_uncalled = true;
 }
 
 bool FXCore::taskHeating(uint8_t expected_tempC)
@@ -852,8 +857,7 @@ bool FXCore::threadProg()
             rtc_prog_expected_finish->addMinutes(prog_selected_duration_mm);
         }
 
-        if (rtc_general_current->isTimeEqual(rtc_prog_expected_finish) ||
-            rtc_general_current->isBiggerThan(rtc_prog_expected_finish))
+        if (rtc_general_current->isBiggerThan(rtc_prog_expected_finish))
         {
             if (prog_pasteur_tempC_reached->getState())
                 prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurFinished));
@@ -904,6 +908,8 @@ bool FXCore::threadProg()
 
 void FXCore::threadMain()
 {
+    if (!is_task_flowing_running)
+        FlowgunTick = 0;
     scr_get_op320->setValueByModbus();
 
     if (prog_running->getState())
@@ -917,11 +923,10 @@ void FXCore::threadMain()
     else
         machine_state->setValue(static_cast<uint8_t>(MACHINE_STATE::Await));
 
-    if (is_flowing_call && !is_flowing_uncalled && !prog_running->getState() && !is_stop_btn_pressed && !is_connected_380V && scr_get_op320->getValue() == SCR_BLOWING_PAGE)
+    if (is_flowing_call && !is_task_flowing_running && !is_flowing_uncalled && !prog_running->getState() && !is_stop_btn_pressed && !is_connected_380V && scr_get_op320->getValue() == SCR_BLOWING_PAGE)
         taskTryToggleFlowing();
     else if (is_flowing_call && is_connected_380V)
     {
-        is_flowing_call = false;
         info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vIn));
         scr_set_op320->setValue(SCR_ERROR_NOTIFY);
     }
@@ -1049,11 +1054,9 @@ void FXCore::hardReset()
 {
     stopAllTasks();
     ee_hard_reset_value_setted.writeEE(1);
-    rtc.setTime(8, 0, 0);
-    rtc.setDate(12, 5, 23);
-    rtc_general_current->setRealTime();
     rtc_general_current->sendToEE(true);
     rtc_general_last_time_point->clone(rtc_general_current);
+    machine_type->setValue(static_cast<uint8_t>(MACHINE_TYPE::DMP_flow));
     solo_heating_tempC->setValue(45);
     solo_freezing_tempC->setValue(15);
     calibration_flowgun_dope_dose->setValue(0);

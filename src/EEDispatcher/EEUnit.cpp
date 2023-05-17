@@ -42,9 +42,8 @@ uint16_t EEUnit::readUint16EE()
     if (type == ValueType::UINT16)
     {
         uint16_t response = 0;
-        ((uint8_t*)&response)[0] = ee24c64->readEE(getVarAddr());
-        ((uint8_t*)&response)[1] = ee24c64->readEE(getVarAddr() + 1);
-        return *((uint16_t*) response);
+        response = (ee24c64->readEE(getVarAddr()) << 8) + ee24c64->readEE(getVarAddr() + 1);
+        return response;
     }
 
     return 0;
@@ -54,8 +53,8 @@ bool EEUnit::writeUint16EE(uint16_t value)
 {
     if (type == ValueType::UINT16)
     {
-        ee24c64->writeEE(getVarAddr(), ((uint8_t*)&value)[0], false);
-        ee24c64->writeEE(getVarAddr() + 1, ((uint8_t*)&value)[1], false);
+        ee24c64->writeEE(getVarAddr(), highByte(value), false);
+        ee24c64->writeEE(getVarAddr() + 1, lowByte(value), false);
         return true;
     }
     return false;
