@@ -37,7 +37,7 @@ void SettingUnit::displayValue()
             mb_var_pointer->writeValue(static_cast<uint16_t>(this->workable_value * this->display_scale));
         else
         {
-            uint16_t final_value = (uint16_t)this->workable_value * (uint16_t)this->display_scale;
+            uint16_t final_value = this->workable_value * this->display_scale;
             mb_var_pointer->writeValue(static_cast<uint16_t>((display_split == 60 ? final_value / display_split * 100 : final_value / display_split) + (final_value % display_split)));
         }
     }
@@ -47,9 +47,11 @@ void SettingUnit::setValueByModbus() {
     if (mb_var_pointer) setValue(mb_var_pointer->readValue() / display_scale);
 }
 
-void SettingUnit::setValue(uint8_t value)
+void SettingUnit::setValue(uint16_t value)
 {
-    this->workable_value = (max_limit == 0 && value <= 255) || value <= max_limit ? value : (max_limit == 0 ? 255 : max_limit);
+    this->workable_value = ee_var_pointer->getType() == ValueType::UINT8 ?
+        (max_limit == 0 && value <= 255) || value <= max_limit ? value : (max_limit == 0 ? 255 : max_limit) :
+        value;
     
     delay(2);
     acceptNewValue();
@@ -57,7 +59,13 @@ void SettingUnit::setValue(uint8_t value)
 
 void SettingUnit::acceptNewValue()
 {
-    if (ee_var_pointer) ee_var_pointer->writeEE(this->workable_value);
+    if (ee_var_pointer)
+    {
+        if (ee_var_pointer->getType() == ValueType::UINT8)
+            ee_var_pointer->writeEE(this->workable_value);
+        else
+            ee_var_pointer->writeUint16EE(this->workable_value);
+    }
     
     delay(2);
     refreshValue();
@@ -65,7 +73,13 @@ void SettingUnit::acceptNewValue()
 
 void SettingUnit::refreshValue()
 {
-    if (ee_var_pointer) ee_var_pointer->readEE(&this->workable_value);
+    if (ee_var_pointer)
+    {
+        if (ee_var_pointer->getType() == ValueType::UINT8)
+            this->workable_value = ee_var_pointer->readEE();
+        else
+            this->workable_value = ee_var_pointer->readUint16EE();
+    }
 
     delay(2);
     displayValue();
@@ -88,8 +102,12 @@ bool SettingUnit::getState() {
 }
 
 uint8_t SettingUnit::getValue() {
-    return this->workable_value;
+    return (uint8_t)this->workable_value;
 }
+
+uint16_t SettingUnit::getUint16Value() {
+    return this->workable_value;
+};
 
 uint16_t SettingUnit::getScaledValue(){
     return (uint16_t)getValue() * display_scale;

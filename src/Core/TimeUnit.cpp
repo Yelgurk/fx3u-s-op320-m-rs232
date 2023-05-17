@@ -143,6 +143,12 @@ void TimeUnit::addMinutes(uint64_t minutes)
     sendToEE(into_ee_after_edit);
 }
 
+void TimeUnit::addSeconds(uint64_t seconds) {
+    TimeObj::addMinutes(seconds);
+    sendToMB();
+    sendToEE(into_ee_after_edit);
+}
+
 void TimeUnit::sendToEE(bool call_flag)
 {
     if (call_flag)

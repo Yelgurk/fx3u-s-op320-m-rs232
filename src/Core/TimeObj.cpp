@@ -59,6 +59,14 @@ void TimeObj::addMinutes(uint64_t minutes)
     this->months = this->months == 0 ? 1 : this->months;
 }
 
+void TimeObj::addSeconds(uint64_t seconds)
+{
+    this->seconds += seconds % 60 ;
+    uint32_t new_min = (seconds / 60) + (this->seconds / 60);
+    this->seconds %= 60;
+    this->addMinutes(new_min);
+}
+
 bool TimeObj::isAnotherDay(TimeObj *reference) {
     return  this->days != reference->days ||
             this->months != reference->months ||

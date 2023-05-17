@@ -44,6 +44,7 @@ public:
     void setZeroDateTime();
     bool isZeroTime();
     void addMinutes(uint64_t minutes);
+    void addSeconds(uint64_t seconds);
     void sendToEE(bool static_flag = true);
     void sendToMB();
     void loadFromEE();

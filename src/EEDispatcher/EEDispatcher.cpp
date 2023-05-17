@@ -59,5 +59,35 @@ bool EEDispatcher::init()
         ee_auto3_is_runned_today
     };
 
+    ee_auto_extra_tempC_arr = new EEUnit[PASTEUR_PRESET_CNT] {
+        ee_auto1_extra_heat_tempC,
+        ee_auto2_extra_heat_tempC,
+        ee_auto3_extra_heat_tempC
+    };
+
+    ee_auto_extra_toggle_arr = new EEUnit[PASTEUR_PRESET_CNT] {
+        ee_auto1_extra_heat_toggle,
+        ee_auto2_extra_heat_toggle,
+        ee_auto3_extra_heat_toggle
+    };
+
+    ee_auto_extra_run_hh_arr = new EEUnit[PASTEUR_PRESET_CNT] {
+        ee_auto1_extra_heat_run_hh,
+        ee_auto2_extra_heat_run_hh,
+        ee_auto3_extra_heat_run_hh
+    };
+
+    ee_auto_extra_run_mm_arr = new EEUnit[PASTEUR_PRESET_CNT] {
+        ee_auto1_extra_heat_run_mm,
+        ee_auto2_extra_heat_run_mm,
+        ee_auto3_extra_heat_run_mm
+    };
+
+    ee_auto_extra_runned_arr = new EEUnit[PASTEUR_PRESET_CNT] {
+        ee_auto1_extra_heat_runned,
+        ee_auto2_extra_heat_runned,
+        ee_auto3_extra_heat_runned
+    };
+
     return response;
 }

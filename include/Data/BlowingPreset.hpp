@@ -11,7 +11,7 @@
 #define DISPLAY_SCALE_SEC DISPLAY_SCALE_VALUE
 #define DISPLAY_SCALE_ML 50 
 #define DISPLAY_SPLIT_SEC 60
-#define MAX_VALUE 240
+#define MAX_VALUE 180
 
 class BlowingPreset
 {
@@ -48,7 +48,7 @@ private:
     }
 
 public:
-    BlowingPreset(MBUnit *mb_blowing_preset_list, MBUnit *mb_blowing_volume, MBUnit *mb_blowing_incV, MBUnit *mb_blowing_decV, EEUnit *ee_blowgun_preset_arr)
+    void init(MBUnit *mb_blowing_preset_list, MBUnit *mb_blowing_volume, MBUnit *mb_blowing_incV, MBUnit *mb_blowing_decV, EEUnit *ee_blowgun_preset_arr)
     {
         this->ee_blowgun_preset_arr = ee_blowgun_preset_arr;  
         delay(2);  

@@ -40,7 +40,7 @@ enum class FINISH_FLAG   : uint8_t { Success, UserCall, MixerError, Power380vErr
 enum class PROG_STATE    : uint8_t { PasteurRunning, PasteurPaused, PasteurFinished, FreezingFinished, HeatingFinished, CycleFinished, COUNT };
 enum class OP320_PROCESS : uint8_t { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
 enum class OP320_STEP    : uint8_t { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, ErrSolveAwait, COUNT };
-enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, SlowHeating, COUNT };
+enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, SlowHeating, PasteurAlready, COUNT };
 
 class FXCore : protected MBDispatcher, protected IODispatcher, protected EEDispatcher, protected PasswordAccess, public TaskManager
 {
@@ -65,13 +65,17 @@ private:
     /* tasks var */
     bool is_task_freezing_running = false,
          is_task_heating_running = false,
-         is_task_washing_running = false,
+         is_task_flowing_running = false,
+         is_task_heating_extra = false,
          start_error_displayed_yet = false,
-         heat_error_displayed_yet = false;
+         heat_error_displayed_yet = false,
+         water_saving_toggle = false,
+         flowing_task_paused = false;
     uint8_t prog_pasteur_tempC = 0,
             prog_heating_tempC = 0,
             prog_freezing_tempC = 0,
-            prog_selected_duration_mm = 0;
+            prog_selected_duration_mm = 0,
+            extra_heating_tempC = 0;
     SettingUnit *machine_state,
                 *prog_running,
                 *prog_state,
@@ -88,6 +92,7 @@ private:
                 *rtc_prog_finished,
                 *rtc_prog_expected_finish,
                 *rtc_blowing_started,
+                *rtc_blowing_paused,
                 *rtc_blowing_finish;
 
     /* configs */
@@ -117,8 +122,8 @@ private:
                 *master_pump_LM_performance,
                 *master_4ma_negative_limit,
                 *master_20ma_positive_limit;
-    BlowingPreset *flowgun_presets;
-    AutoPasteurPreset *auto_prog_presets;
+    BlowingPreset flowgun_presets = BlowingPreset();
+    AutoPasteurPreset auto_prog_presets = AutoPasteurPreset();
 
     void checkIsHardReseted();
     bool checkIsProgWasRunned();
@@ -141,8 +146,8 @@ public:
     void taskPauseProg(OP320_ERROR flag);
     void taskResumeProg();
     void taskFinishProg(FINISH_FLAG flag);
-    void taskFinishFlowing(bool forced = true);
-    void taskHeating(uint8_t expected_tempC);
+    bool taskFinishFlowing(bool forced = true);
+    bool taskHeating(uint8_t expected_tempC);
     void taskFreezing(uint8_t expected_tempC);
     void checkAutoStartup();
     bool threadProg();

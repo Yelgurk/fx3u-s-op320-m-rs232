@@ -29,6 +29,7 @@ public:
     uint64_t getYears();
     void clone(TimeObj *parent, CloneType type = CloneType::All);
     void addMinutes(uint64_t minutes);
+    void addSeconds(uint64_t seconds);
     bool isAnotherDay(TimeObj *reference);
     bool isBiggerThan(TimeObj *reference, bool relative_today = false);
     bool isTimeEqual(TimeObj *reference);

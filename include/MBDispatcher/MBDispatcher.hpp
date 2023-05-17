@@ -7,7 +7,7 @@
 #ifndef MBDispatcher_hpp
 #define MBDispatcher_hpp
 
-#define COMM_COUNT 40
+#define COMM_COUNT 41
 
 class MBDispatcher
 {
@@ -52,13 +52,13 @@ public:
            mb_blow_calib_dosage = MBUnit(mb_au16data, 29, type::Uint16),
            mb_blow_calib_range = MBUnit(mb_au16data, 30, type::Uint16),
            mb_self_pasteur_tempC = MBUnit(mb_au16data, 31, type::Uint16),
-           mb_self_heating_tempC = MBUnit(mb_au16data, 32, type::Uint16),
-           mb_self_freezing_tempC = MBUnit(mb_au16data, 33, type::Uint16),
+           mb_self_freezing_tempC = MBUnit(mb_au16data, 32, type::Uint16),
+           mb_self_heating_tempC = MBUnit(mb_au16data, 33, type::Uint16),
            mb_self_durat_mm = MBUnit(mb_au16data, 34, type::Uint16),
            mb_self_mode_list = MBUnit(mb_au16data, 35, type::Uint16),
            mb_auto_pasteur_tempC = MBUnit(mb_au16data, 36, type::Uint16),
-           mb_auto_heating_tempC = MBUnit(mb_au16data, 37, type::Uint16),
-           mb_auto_freezing_tempC = MBUnit(mb_au16data, 38, type::Uint16),
+           mb_auto_freezing_tempC = MBUnit(mb_au16data, 37, type::Uint16),
+           mb_auto_heating_tempC = MBUnit(mb_au16data, 38, type::Uint16),
            mb_auto_durat_mm = MBUnit(mb_au16data, 39, type::Uint16),
            mb_auto_run_rtc_hh = MBUnit(mb_au16data, 40, type::Uint16),
            mb_auto_run_rtc_mm = MBUnit(mb_au16data, 41, type::Uint16),
@@ -70,6 +70,10 @@ public:
            mb_blowing_performance_lm = MBUnit(mb_au16data, 47, type::Uint16),
            mb_notification_list = MBUnit(mb_au16data, 48, type::Uint16),
            mb_machine_type = MBUnit(mb_au16data, 52, type::Uint16),
+           mb_auto_extra_heat_tempC = MBUnit(mb_au16data, 53, type::Uint16),
+           mb_auto_extra_heat_toggle = MBUnit(mb_au16data, 54, type::Uint16),
+           mb_auto_extra_heat_run_hh = MBUnit(mb_au16data, 55, type::Uint16),
+           mb_auto_extra_heat_run_mm = MBUnit(mb_au16data, 56, type::Uint16),
 
            mb_comm_stop_proc = MBUnit(mb_au16data, 784, type::Coil),
            mb_comm_blow_preset_1 = MBUnit(mb_au16data, 785, type::Coil),
@@ -114,7 +118,8 @@ public:
            mb_comm_goto_scr_blowing = MBUnit(mb_au16data, 822, type::Coil),
            mb_comm_goto_scr_master = MBUnit(mb_au16data, 823, type::Coil),
            mb_master_machine_type_up = MBUnit(mb_au16data, 824, type::Coil),
-           mb_master_machine_type_down = MBUnit(mb_au16data, 825, type::Coil);
+           mb_master_machine_type_down = MBUnit(mb_au16data, 825, type::Coil),
+           mb_comm_auto_extra_heat_toggle = MBUnit(mb_au16data, 826, type::Coil);
 
     void init();
     void poll();

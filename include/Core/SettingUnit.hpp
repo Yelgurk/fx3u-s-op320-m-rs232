@@ -10,7 +10,7 @@ class SettingUnit
 private:
     EEUnit *ee_var_pointer = NULL;
     MBUnit *mb_var_pointer = NULL;
-    uint8_t workable_value = 0;
+    uint16_t workable_value = 0;
     uint8_t max_limit = 0;
     uint8_t display_scale = 1;
     uint8_t display_split = 1;
@@ -22,13 +22,14 @@ public:
     void setSplit(uint8_t display_split);
     void displayValue();
     void setValueByModbus();
-    void setValue(uint8_t value);
+    void setValue(uint16_t value);
     void acceptNewValue();
     void refreshValue();
     void incValue();
     void decValue();
     bool getState();
     uint8_t getValue();
+    uint16_t getUint16Value();
     uint16_t getScaledValue();
 };
 
