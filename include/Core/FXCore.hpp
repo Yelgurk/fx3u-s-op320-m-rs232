@@ -158,7 +158,7 @@ public:
     void flowgunOff();
     bool taskHeating(uint8_t expected_tempC);
     void taskFreezing(uint8_t expected_tempC);
-    void checkAutoStartup();
+    void checkAutoStartup(bool force_off = false);
     bool threadProg();
     void threadMain();
     void readSensors();

@@ -136,16 +136,36 @@ public:
 
     void acceptChanges()
     {
+        uint8_t old_hh = 0,
+                old_mm = 0,
+                new_hh = 0,
+                new_mm = 0;
+
         preset_pasteur_tempC->setValueByModbus();
         preset_heating_tempC->setValueByModbus();
         preset_freezing_tempC->setValueByModbus();
         preset_duration_mm->setValueByModbus();
+        preset_extra_tempC->setValueByModbus();
+
+        old_hh = run_rtc_trigger[preset_selected->getValue()]->getHours();
+        old_mm = run_rtc_trigger[preset_selected->getValue()]->getMins();
         run_rtc_trigger[preset_selected->getValue()]->loadFromMB();
         run_rtc_trigger[preset_selected->getValue()]->sendToEE(true);
-        preset_extra_tempC->setValueByModbus();
+        new_hh = run_rtc_trigger[preset_selected->getValue()]->getHours();
+        new_mm = run_rtc_trigger[preset_selected->getValue()]->getMins();
+
+        if (old_hh != new_hh || old_mm != new_mm)
+            resetCallFlags(preset_selected->getValue() + 1, 1);
+
+        old_hh = run_rtc_extra[preset_selected->getValue()]->getHours();
+        old_mm = run_rtc_extra[preset_selected->getValue()]->getMins();
         run_rtc_extra[preset_selected->getValue()]->loadFromMB();
         run_rtc_extra[preset_selected->getValue()]->sendToEE(true);
-        resetCallFlags();
+        new_hh = run_rtc_extra[preset_selected->getValue()]->getHours();
+        new_mm = run_rtc_extra[preset_selected->getValue()]->getMins();
+
+        if (old_hh != new_hh || old_mm != new_mm)
+            resetCallFlags(preset_selected->getValue() + 1, 2);
     }
 
     void togglePreset() {
@@ -167,8 +187,8 @@ public:
             {
                 if (current_time.getDiffSec(run_rtc_trigger[index], true) / 60 <= 60)
                     in_range = true;
-                //else
-                    //ee_is_runned_today[index].writeEE(1);
+                else
+                    ee_is_runned_today[index].writeEE(1);
                 return index + 1;
             }
 
@@ -186,8 +206,8 @@ public:
             {
                 if (current_time.getDiffSec(run_rtc_extra[index], true) / 60 <= 60)
                     in_range = true;
-                //else
-                    //ee_auto_extra_runned[index].writeEE(1);
+                else
+                    ee_auto_extra_runned[index].writeEE(1);
                 return index + 1;
             }
 
@@ -202,9 +222,6 @@ public:
         uint8_t &preset_duration
     )
     {
-        if (ee_is_runned_today[preset_index].readEE() == 1)
-            return false;
-
         resumePreset(
             preset_index,
             pasteur_tempC,
@@ -213,7 +230,6 @@ public:
             preset_duration
         );
 
-        ee_is_runned_today[preset_index].writeEE(1);
         return true;
     }
 
@@ -241,14 +257,27 @@ public:
 
         ee_auto_extra_runned[preset_index].writeEE(1);
         return ee_auto_extra_tempC[preset_index].readEE();
+
+        ee_auto_extra_runned[preset_index].writeEE(1);
     }
 
-    void resetCallFlags()
+    void resetCallFlags(uint8_t sel_index = 0, uint8_t type = 0)
     {
-        for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
+        if (sel_index == 0)
         {
-            ee_is_runned_today[index].writeEE(0);
-            ee_auto_extra_runned[index].writeEE(0);
+            for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
+            {
+                ee_is_runned_today[index].writeEE(0);
+                ee_auto_extra_runned[index].writeEE(0);
+            }
+        }
+        else
+        {
+            if (type == 0 || type == 1)
+                ee_is_runned_today[sel_index - 1].writeEE(0);
+            
+            if (type == 0 || type == 2)
+                ee_auto_extra_runned[sel_index - 1].writeEE(0);
         }
         preset_runned_today->refreshValue();
         preset_extra_runned->refreshValue();

@@ -131,6 +131,22 @@ void FXCore::callTempCSensor()
         sensor_call_tempC[sensor_call_index] =
             (response - SENSOR_TEMPC_MINVAL) /
             SENSOR_1TC_IN_MA_VAL((double)master_20ma_positive_limit->getUint16Value(), (double)master_4ma_negative_limit->getValue());
+        
+        if (sensor_call_tempC[sensor_call_index] > (double)master_4ma_negative_limit->getValue())
+            sensor_call_tempC[sensor_call_index] -= (double)master_4ma_negative_limit->getValue();
+        else
+            sensor_call_tempC[sensor_call_index] = 0;
+
+        if (master_hysteresis_toggle->getState())
+        {
+            if (master_calibr_side_toggle->getState())
+                sensor_call_tempC[sensor_call_index] += master_hysteresis_tempC->getValue();
+            else if (sensor_call_tempC[sensor_call_index] > master_hysteresis_tempC->getValue())
+                sensor_call_tempC[sensor_call_index] -= master_hysteresis_tempC->getValue();
+            else
+                sensor_call_tempC[sensor_call_index] = 0;
+        }
+
         ++sensor_call_index;
     }
 
@@ -455,6 +471,7 @@ void FXCore::stopAllTasks()
     is_stop_btn_pressed = false;
     if (prog_running->getState())
         taskFinishProg(FINISH_FLAG::UserCall);
+    checkAutoStartup(true);
         
     taskFinishFlowing();
     taskTryToggleHeating(false);
@@ -822,32 +839,36 @@ void FXCore::taskFreezing(uint8_t expected_tempC)
     }
 }
 
-void FXCore::checkAutoStartup()
+void FXCore::checkAutoStartup(bool force_off)
 {
     uint8_t preset_id = 0;
     bool in_range = false;
     if (preset_id = auto_prog_presets.isTimeToRunPreset(*rtc_general_current, in_range) > 0)
     {
-        if (in_range)
+        if (in_range && !force_off)
             taskStartProg(preset_id);
+
+        /*
         else
         {
             info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::PowerMoreHour));
             scr_set_op320->setValue(SCR_ERROR_NOTIFY);
         }
+        */
     }
 
     preset_id = 0;
     in_range = false;
     if (preset_id = auto_prog_presets.isTimeToRunExtra(*rtc_general_current, in_range) > 0)
     {
-        if (in_range && !prog_state->getState() && !is_task_flowing_running)
+        if (in_range && !prog_state->getState() && !is_task_flowing_running && !force_off)
         {
             is_task_heating_extra = true;
             is_task_heating_running = false;
             is_task_freezing_running = false;
             extra_heating_tempC = auto_prog_presets.startExtraHeat(preset_id - 1);
         }
+        /*
         else
         {
             if (prog_state->getState())
@@ -856,6 +877,7 @@ void FXCore::checkAutoStartup()
                 info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::PowerMoreHour));
             scr_set_op320->setValue(SCR_ERROR_NOTIFY);
         }
+        */
     }
 }
 
@@ -972,8 +994,7 @@ bool FXCore::threadProg()
     }
 
     if ((prog_need_in_freezing->getState() ? prog_freezing_part_finished->getState() : true) &&
-        (prog_need_in_heating->getValue() ? prog_heating_part_finished->getState() : true) &&
-        prog_state->getValue() >= static_cast<uint8_t>(PROG_STATE::PasteurFinished))
+        (prog_need_in_heating->getValue() ? prog_heating_part_finished->getState() : true))
         taskFinishProg(FINISH_FLAG::Success);
 
     return true;
@@ -1157,8 +1178,8 @@ void FXCore::hardReset()
     master_hysteresis_toggle->setValue(1);
     master_hysteresis_tempC->setValue(2);
     master_pump_LM_performance->setValue(38);
-    master_4ma_negative_limit->setValue(60);
-    master_20ma_positive_limit->setValue(250);
+    master_4ma_negative_limit->setValue(50);
+    master_20ma_positive_limit->setValue(150);
     flowgun_presets.setDefault();
     flowgun_presets.selectPreset(0);
     auto_prog_presets.setDefault();
