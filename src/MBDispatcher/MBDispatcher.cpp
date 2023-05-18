@@ -43,7 +43,8 @@ void MBDispatcher::init()
         &mb_comm_goto_scr_master,
         &mb_master_machine_type_up,
         &mb_master_machine_type_down,
-        &mb_comm_auto_extra_heat_toggle
+        &mb_comm_auto_extra_heat_toggle,
+        &mb_master_calibr_toggle
     };
 
     this->op320 = Modbus(FX3U_ID, Serial, 0);

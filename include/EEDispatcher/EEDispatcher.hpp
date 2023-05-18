@@ -123,6 +123,8 @@ public:
            ee_auto2_extra_heat_runned = EEUnit(0x005B, &ee24c64, false),
            ee_auto3_extra_heat_runned = EEUnit(0x005C, &ee24c64, false),
 
+           ee_master_calibr_side_toggle = EEUnit(0x005D, &ee24c64, false),
+
            ee_dynamic_rtc_curr_hh = EEUnit(EE_SECTOR_START_ADDR + 0, &ee24c64, false, ee24c64.getSectorStartAddr()),
            ee_dynamic_rtc_curr_mm = EEUnit(EE_SECTOR_START_ADDR + 1, &ee24c64, false, ee24c64.getSectorStartAddr()),
            ee_dynamic_rtc_curr_ss = EEUnit(EE_SECTOR_START_ADDR + 2, &ee24c64, true, ee24c64.getSectorStartAddr());

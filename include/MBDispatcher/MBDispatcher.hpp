@@ -7,7 +7,7 @@
 #ifndef MBDispatcher_hpp
 #define MBDispatcher_hpp
 
-#define COMM_COUNT 41
+#define COMM_COUNT 42
 
 class MBDispatcher
 {
@@ -74,6 +74,7 @@ public:
            mb_auto_extra_heat_toggle = MBUnit(mb_au16data, 54, type::Uint16),
            mb_auto_extra_heat_run_hh = MBUnit(mb_au16data, 55, type::Uint16),
            mb_auto_extra_heat_run_mm = MBUnit(mb_au16data, 56, type::Uint16),
+           mb_master_calibr_display = MBUnit(mb_au16data, 57, type::Uint16),
 
            mb_comm_stop_proc = MBUnit(mb_au16data, 784, type::Coil),
            mb_comm_blow_preset_1 = MBUnit(mb_au16data, 785, type::Coil),
@@ -119,7 +120,8 @@ public:
            mb_comm_goto_scr_master = MBUnit(mb_au16data, 823, type::Coil),
            mb_master_machine_type_up = MBUnit(mb_au16data, 824, type::Coil),
            mb_master_machine_type_down = MBUnit(mb_au16data, 825, type::Coil),
-           mb_comm_auto_extra_heat_toggle = MBUnit(mb_au16data, 826, type::Coil);
+           mb_comm_auto_extra_heat_toggle = MBUnit(mb_au16data, 826, type::Coil),
+           mb_master_calibr_toggle = MBUnit(mb_au16data, 827, type::Coil);
 
     void init();
     void poll();

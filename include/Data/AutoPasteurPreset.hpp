@@ -145,6 +145,7 @@ public:
         preset_extra_tempC->setValueByModbus();
         run_rtc_extra[preset_selected->getValue()]->loadFromMB();
         run_rtc_extra[preset_selected->getValue()]->sendToEE(true);
+        resetCallFlags();
     }
 
     void togglePreset() {
@@ -166,15 +167,15 @@ public:
             {
                 if (current_time.getDiffSec(run_rtc_trigger[index], true) / 60 <= 60)
                     in_range = true;
-                else
-                    ee_is_runned_today[index].writeEE(1);
+                //else
+                    //ee_is_runned_today[index].writeEE(1);
                 return index + 1;
             }
 
         return 0;
     }
 
-    uint8_t isTimeTiRunExtra(TimeUnit &current_time, bool &in_range)
+    uint8_t isTimeToRunExtra(TimeUnit &current_time, bool &in_range)
     {
         in_range = false;
 
@@ -185,8 +186,8 @@ public:
             {
                 if (current_time.getDiffSec(run_rtc_extra[index], true) / 60 <= 60)
                     in_range = true;
-                else
-                    ee_auto_extra_runned[index].writeEE(1);
+                //else
+                    //ee_auto_extra_runned[index].writeEE(1);
                 return index + 1;
             }
 
@@ -201,8 +202,7 @@ public:
         uint8_t &preset_duration
     )
     {
-        selectPreset(preset_index);
-        if (preset_runned_today->getValue() == 1)
+        if (ee_is_runned_today[preset_index].readEE() == 1)
             return false;
 
         resumePreset(
@@ -213,7 +213,7 @@ public:
             preset_duration
         );
 
-        preset_runned_today->setValue(1);
+        ee_is_runned_today[preset_index].writeEE(1);
         return true;
     }
 
@@ -225,27 +225,25 @@ public:
         uint8_t &preset_duration
     )
     {
-        selectPreset(preset_index);
         delay(50);
-        pasteur_tempC = preset_pasteur_tempC->getValue();
-        heating_tempC = preset_heating_tempC->getValue();
-        freezing_tempC = preset_freezing_tempC->getValue();
-        preset_duration = preset_duration_mm->getValue();
+        pasteur_tempC = ee_pasteur_tempC[preset_index].readEE();
+        heating_tempC = ee_heating_tempC[preset_index].readEE();
+        freezing_tempC = ee_freezing_tempC[preset_index].readEE();
+        preset_duration = ee_pasteur_duratMM[preset_duration].readEE();
     }
 
     uint8_t startExtraHeat(
         uint8_t preset_index
     )
     {
-        selectPreset(preset_index);
-        if (preset_extra_runned->getValue() == 1)
+        if (ee_auto_extra_runned[preset_index].readEE() == 1)
             return 0;
 
-        preset_runned_today->setValue(1);
-        return preset_extra_tempC->getValue();;
+        ee_auto_extra_runned[preset_index].writeEE(1);
+        return ee_auto_extra_tempC[preset_index].readEE();
     }
 
-    void newDay()
+    void resetCallFlags()
     {
         for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
         {

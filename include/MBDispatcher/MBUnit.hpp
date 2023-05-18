@@ -3,7 +3,7 @@
 #ifndef MBUnit_hpp
 #define MBUnit_hpp
 
-#define MB_UNIT_BUFF_MAIN 57
+#define MB_UNIT_BUFF_MAIN 58
 #define MB_UNIT_OP_COMM 3
 #define MB_UNIT_BUFF_SIZE (MB_UNIT_BUFF_MAIN + MB_UNIT_OP_COMM)
 

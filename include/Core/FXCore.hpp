@@ -30,6 +30,10 @@
 #define BLOWGUN_PRESET_WASHING 3
 
 #define SENSOR_TEMPC_CALL_CNT 15
+#define SENSOR_TEMPC_MAXVAL   (double)(4095 / 22 * 20)
+#define SENSOR_TEMPC_MINVAL   (double)(4095 / 22 * 4)
+#define SENSOR_1TC_IN_MA_VAL(max_tempC, min_tempC) ((SENSOR_TEMPC_MAXVAL - SENSOR_TEMPC_MINVAL) / (max_tempC + min_tempC))
+
 #define SENSOR_CHARGE_MAXVAL (double)2320
 #define SENSOR_CHARGE_MINVAL (double)(SENSOR_CHARGE_MAXVAL / 26 * 23)
 #define SENSOR_CHARGE_RANGE  (double)(SENSOR_CHARGE_MAXVAL - SENSOR_CHARGE_MINVAL)
@@ -40,7 +44,7 @@ enum class FINISH_FLAG   : uint8_t { Success, UserCall, MixerError, Power380vErr
 enum class PROG_STATE    : uint8_t { PasteurRunning, PasteurPaused, PasteurFinished, FreezingFinished, HeatingFinished, CycleFinished, COUNT };
 enum class OP320_PROCESS : uint8_t { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
 enum class OP320_STEP    : uint8_t { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, ErrSolveAwait, COUNT };
-enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, SlowHeating, PasteurAlready, COUNT };
+enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, SlowHeating, PasteurAlready, TempCSensorError, COUNT };
 
 class FXCore : protected MBDispatcher, protected IODispatcher, protected EEDispatcher, protected PasswordAccess, public TaskManager
 {
@@ -69,8 +73,10 @@ private:
          is_task_heating_extra = false,
          start_error_displayed_yet = false,
          heat_error_displayed_yet = false,
+         flow_error_displayed_yet = false,
          water_saving_toggle = false,
-         flowing_task_paused = false;
+         flowing_task_paused = false,
+         sensor_tempC_error = false;
     uint8_t prog_pasteur_tempC = 0,
             prog_heating_tempC = 0,
             prog_freezing_tempC = 0,
@@ -122,7 +128,8 @@ private:
                 *master_hysteresis_tempC,
                 *master_pump_LM_performance,
                 *master_4ma_negative_limit,
-                *master_20ma_positive_limit;
+                *master_20ma_positive_limit,
+                *master_calibr_side_toggle;
     BlowingPreset flowgun_presets = BlowingPreset();
     AutoPasteurPreset auto_prog_presets = AutoPasteurPreset();
 
