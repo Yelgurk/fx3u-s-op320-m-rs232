@@ -770,7 +770,7 @@ bool FXCore::taskHeating(uint8_t expected_tempC)
         return false;
     }
 
-    if (prog_running->getState() || is_task_heating_running)
+    if (prog_running->getState() || is_task_heating_running || is_task_heating_extra)
     {
         taskToggleMixer(true);
 
@@ -779,15 +779,16 @@ bool FXCore::taskHeating(uint8_t expected_tempC)
         else
         {
             io_water_jacket_r.write(false);
-            if (liquid_tempC <= expected_tempC)
-                if (is_heaters_starters_available)
+            if (is_heaters_starters_available)
+            {
+                if (liquid_tempC <= expected_tempC)
                     io_heater_r.write(true);
-            else
-                if (is_heaters_starters_available)
+                else
                     io_heater_r.write(false);
-        }
 
-        is_heaters_starters_available = false;
+                is_heaters_starters_available = false;
+            }
+        }
     }
     else if (is_heaters_starters_available)
     {
