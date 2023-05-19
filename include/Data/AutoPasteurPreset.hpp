@@ -176,89 +176,76 @@ public:
         preset_extra_toggle->setValue(preset_extra_toggle->getValue() == 0 ? 1 : 0);
     }
 
-    uint8_t isTimeToRunPreset(TimeUnit &current_time, bool &in_range)
+    bool isTimeToRunPreset(uint8_t &preset_index, TimeUnit &current_time, bool &in_range)
     {
-        in_range = false;
-
         for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
-            if (current_time.isBiggerThan(run_rtc_trigger[index], true) &&
-                ee_run_toggle[index].readEE() == 1 &&
-                ee_is_runned_today[index].readEE() == 0)
-            {
-                if (current_time.getDiffSec(run_rtc_trigger[index], true) / 60 <= 60)
-                    in_range = true;
-                else
-                    ee_is_runned_today[index].writeEE(1);
-                return index + 1;
-            }
+        {
+            if (ee_is_runned_today[index].readEE() == 0)
+                if (ee_run_toggle[index].readEE() == 1)
+                    if (current_time.isBiggerThan(run_rtc_trigger[index], true))
+                    {
+                        if (current_time.getDiffSec(run_rtc_trigger[index], true) / 60 <= 60)
+                            in_range = true;
+                        else
+                            ee_is_runned_today[index].writeEE(1);
 
-        return 0;
+                        preset_index = (index + (uint8_t)1);
+                        return true;
+                    }   
+        }
+        return false;
     }
 
-    uint8_t isTimeToRunExtra(TimeUnit &current_time, bool &in_range)
+    bool isTimeToRunExtra(uint8_t &preset_index, TimeUnit &current_time, bool &in_range)
     {
-        in_range = false;
-
         for (uint8_t index = 0; index < PASTEUR_PRESET_CNT; index++)
-            if (current_time.isBiggerThan(run_rtc_extra[index], true) &&
-                ee_auto_extra_toggle[index].readEE() == 1 &&
-                ee_auto_extra_runned[index].readEE() == 0)
-            {
-                if (current_time.getDiffSec(run_rtc_extra[index], true) / 60 <= 60)
-                    in_range = true;
-                else
-                    ee_auto_extra_runned[index].writeEE(1);
-                return index + 1;
-            }
+        {
+            if (ee_auto_extra_runned[index].readEE() == 0)
+                if (ee_run_toggle[index].readEE() == 1 && ee_auto_extra_toggle[index].readEE() == 1)
+                    if (current_time.isBiggerThan(run_rtc_extra[index], true))
+                    {
+                        if (current_time.getDiffSec(run_rtc_extra[index], true) / 60 <= 60)
+                            in_range = true;
+                        else
+                            ee_auto_extra_runned[index].writeEE(1);
 
-        return 0;
+                        preset_index = (index + (uint8_t)1);
+                        return true;
+                    }   
+        }
+
+        return false;
     }
 
-    bool startPreset(
-        uint8_t preset_index,
-        uint8_t &pasteur_tempC,
-        uint8_t &heating_tempC,
-        uint8_t &freezing_tempC,
-        uint8_t &preset_duration
-    )
+    bool startPreset(uint8_t preset_index, uint8_t &pasteur_tempC, uint8_t &heating_tempC, uint8_t &freezing_tempC, uint8_t &preset_duration)
     {
-        resumePreset(
-            preset_index,
-            pasteur_tempC,
-            heating_tempC,
-            freezing_tempC,
-            preset_duration
-        );
+        resumePreset(preset_index, pasteur_tempC, heating_tempC, freezing_tempC, preset_duration);
 
+        if (ee_is_runned_today[preset_index].readEE() == 1)
+            return false;
+        else
+            ee_is_runned_today[preset_index].writeEE(1);
         return true;
     }
 
-    void resumePreset(
-        uint8_t preset_index,
-        uint8_t &pasteur_tempC,
-        uint8_t &heating_tempC,
-        uint8_t &freezing_tempC,
-        uint8_t &preset_duration
-    )
+    void resumePreset(uint8_t preset_index, uint8_t &pasteur_tempC, uint8_t &heating_tempC, uint8_t &freezing_tempC, uint8_t &preset_duration)
     {
+        selectPreset(preset_index);
         delay(50);
         pasteur_tempC = ee_pasteur_tempC[preset_index].readEE();
         heating_tempC = ee_heating_tempC[preset_index].readEE();
         freezing_tempC = ee_freezing_tempC[preset_index].readEE();
-        preset_duration = ee_pasteur_duratMM[preset_duration].readEE();
+        preset_duration = ee_pasteur_duratMM[preset_index].readEE();
     }
 
-    uint8_t startExtraHeat(
-        uint8_t preset_index
-    )
+    uint8_t startExtraHeat(uint8_t preset_index)
     {
-        if (ee_auto_extra_runned[preset_index].readEE() == 1)
+        delay(50);
+        if (ee_auto_extra_runned[preset_index].readEE() != 0)
             return 0;
 
         ee_auto_extra_runned[preset_index].writeEE(1);
         return ee_auto_extra_tempC[preset_index].readEE();
-
-        ee_auto_extra_runned[preset_index].writeEE(1);
     }
 
     void resetCallFlags(uint8_t sel_index = 0, uint8_t type = 0)
@@ -302,6 +289,9 @@ public:
             ee_auto_extra_runned[index].writeEE(0);
         }
     }
+
+    void markPresetAsCompleted(uint8_t index) { ee_is_runned_today[index].writeEE(1); }
+    void markExtraAsCompleted(uint8_t index) { ee_auto_extra_runned[index].writeEE(1); }
 };
 
 #endif

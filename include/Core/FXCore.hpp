@@ -145,7 +145,7 @@ private:
 public:
     void init();
     void setNewDateTime();
-    void stopAllTasks();
+    void stopAllTasks(bool stop_presets = true);
     void taskTryToggleFlowing();
     void taskTryToggleHeating(bool turn_on);
     void taskTryToggleFreezing(bool turn_on);
@@ -157,7 +157,7 @@ public:
     bool taskFinishFlowing(bool forced = true);
     void flowgunOff();
     bool taskHeating(uint8_t expected_tempC);
-    void taskFreezing(uint8_t expected_tempC);
+    bool taskFreezing(uint8_t expected_tempC);
     void checkAutoStartup(bool force_off = false);
     bool threadProg();
     void threadMain();
