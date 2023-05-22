@@ -12,6 +12,14 @@ bool FXCore::checkIsProgWasRunned()
 {
     if (prog_running->getState())
     {
+        uint8_t state_index = prog_state->getValue();
+        if (state_index >= static_cast<uint8_t>(PROG_STATE::PasteurFinished))
+            is_pasteur_part_finished_crutch = true;
+        if (state_index >= static_cast<uint8_t>(PROG_STATE::FreezingFinished))
+            is_freezing_part_finished_crutch = true;
+        if (state_index >= static_cast<uint8_t>(PROG_STATE::HeatingFinished))
+            is_heating_part_finished_crutch = true;
+
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
         {
             if (rtc_general_current->getDiffSec(rtc_prog_pasteur_paused) >= PASTEUR_AWAIT_LIMIT_MM * 60)
@@ -417,7 +425,7 @@ void FXCore::init()
     TaskManager::newTask(1000,  [this]() -> void { callTempCSensor(); displayMainInfoVars(); });
     TaskManager::newTask(5000,  [this]() -> void { if (scr_get_op320->getValue() == static_cast<uint8_t>(SCR_HELLO_PAGE)) gotoMainScreen(); readWaterInJacket(); flow_error_displayed_yet = false; });
     TaskManager::newTask(10000, [this]() -> void { setActivityPoint(); });
-    TaskManager::newTask(30000, [this]() -> void { is_heaters_starters_available = true; start_error_displayed_yet = false; });
+    TaskManager::newTask(30000, [this]() -> void { is_heaters_starters_state = !is_heaters_starters_state; start_error_displayed_yet = false; });
     TaskManager::newTask(60000, [this]() -> void { water_saving_toggle = !water_saving_toggle; });
     TaskManager::newTask(2 * 60 * 1000, [this]() -> void { EEDispatcher::ee24c64.checkEECycle(false); });
 
@@ -596,6 +604,7 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
         else
             stopAllTasks(false);
 
+        is_pasteur_part_finished_crutch = false;
         start_error_displayed_yet = false;
         heat_error_displayed_yet = false;
         prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurRunning));
@@ -640,6 +649,9 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
             heating_up_estimated_mm + 
             prog_selected_duration_mm
         );
+
+        is_freezing_part_finished_crutch = !prog_need_in_freezing->getState();
+        is_heating_part_finished_crutch = !prog_need_in_heating->getState();
         taskToggleMixer(true);
 
         return true;
@@ -686,6 +698,10 @@ void FXCore::taskFinishProg(FINISH_FLAG flag)
     {
         prog_running->setValue(0);
         prog_state->setValue(static_cast<uint8_t>(PROG_STATE::CycleFinished));
+
+        is_pasteur_part_finished_crutch = false;
+        is_heating_part_finished_crutch = false;
+        is_freezing_part_finished_crutch = false;
         
         taskToggleMixer(false);
         taskTryToggleFreezing(false);
@@ -765,12 +781,12 @@ bool FXCore::taskHeating(uint8_t expected_tempC)
 {
     if (expected_tempC == 0)
     {
-        if (is_heaters_starters_available)
+        if (!is_heaters_starters_state)
             io_heater_r.write(false);
         return false;
     }
 
-    if (prog_running->getState() || is_task_heating_running || is_task_heating_extra)
+    if (is_task_heating_running || is_task_heating_extra)
     {
         taskToggleMixer(true);
 
@@ -779,22 +795,23 @@ bool FXCore::taskHeating(uint8_t expected_tempC)
         else
         {
             io_water_jacket_r.write(false);
-            if (is_heaters_starters_available)
+            if (liquid_tempC <= expected_tempC)
             {
-                if (liquid_tempC <= expected_tempC)
+                if (is_heaters_starters_state)
                     io_heater_r.write(true);
-                else
+            }
+            else
+            {
+                if (!is_heaters_starters_state)
                     io_heater_r.write(false);
-
-                is_heaters_starters_available = false;
             }
         }
     }
-    else if (is_heaters_starters_available)
+    else
     {
-        is_heaters_starters_available = false;
         taskToggleMixer(false);
-        io_heater_r.write(false);
+        if (!is_heaters_starters_state)
+            io_heater_r.write(false);
     }
 
     return true;
@@ -811,6 +828,8 @@ bool FXCore::taskFreezing(uint8_t expected_tempC)
     if (prog_running->getState() || is_task_freezing_running)
     {
         taskToggleMixer(true);
+        if (!is_heaters_starters_state)
+            io_heater_r.write(false);
 
         if (liquid_tempC > expected_tempC)
         {
@@ -860,7 +879,7 @@ void FXCore::checkAutoStartup(bool force_off)
 
 bool FXCore::threadProg()
 {
-    if (prog_state->getValue() < static_cast<uint8_t>(PROG_STATE::PasteurFinished))
+    if (!is_pasteur_part_finished_crutch)
     {
         if (is_mixer_error)
         {
@@ -898,9 +917,13 @@ bool FXCore::threadProg()
             }
         }
 
-        if (is_connected_380V && !WJacketErr &&
-            prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
-            taskResumeProg();
+        if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
+        {
+            if (is_connected_380V && !WJacketErr)
+                taskResumeProg();
+            else
+                return false;
+        }
 
         if (!WJacketErr && prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurRunning))
             rtc_prog_pasteur_paused->setZeroDateTime();
@@ -920,7 +943,27 @@ bool FXCore::threadProg()
             io_water_jacket_r.write(false);
         }
 
-        taskHeating(prog_pasteur_tempC);
+        //taskHeating(prog_pasteur_tempC);
+        /* heating proc begin - cratch */
+        taskToggleMixer(true);
+
+        if (!is_water_in_jacket)
+            io_water_jacket_r.write(true);
+        else
+        {
+            io_water_jacket_r.write(false);
+            if (liquid_tempC <= prog_pasteur_tempC)
+            {
+                if (is_heaters_starters_state)
+                    io_heater_r.write(true);
+            }
+            else
+            {
+                if (!is_heaters_starters_state)
+                    io_heater_r.write(false);
+            }
+        }
+        /* heating proc end */
 
         if (liquid_tempC >= prog_pasteur_tempC && !prog_pasteur_tempC_reached->getState())
         {
@@ -932,7 +975,11 @@ bool FXCore::threadProg()
         if (rtc_general_current->isBiggerThan(rtc_prog_expected_finish))
         {
             if (prog_pasteur_tempC_reached->getState())
+            {
                 prog_state->setValue(static_cast<uint8_t>(PROG_STATE::PasteurFinished));
+                is_pasteur_part_finished_crutch = true;
+                rtc_prog_expected_finish->setZeroDateTime();
+            }
             else
             {
                 rtc_prog_expected_finish->addMinutes((prog_pasteur_tempC - liquid_tempC) * HEAT_MM_FOR_1CELSIUS_UP);
@@ -943,33 +990,58 @@ bool FXCore::threadProg()
                     scr_set_op320->setValue(SCR_ERROR_NOTIFY);
                 }
             }
-        };
+        }
 
         return true;
     }
 
-    if (prog_need_in_freezing->getState() ? !prog_freezing_part_finished->getState() : false)
+    if (!is_freezing_part_finished_crutch)
     {
         taskHeating(0);
         taskFreezing(prog_freezing_tempC);
         if (liquid_tempC <= prog_freezing_tempC)
         {
             prog_freezing_part_finished->setValue(1);
+            is_freezing_part_finished_crutch = true;
             prog_state->setValue(static_cast<uint8_t>(PROG_STATE::FreezingFinished));
         }
-        return true;
+        else
+            return true;
     }
 
-    if (prog_need_in_heating->getValue() ? !prog_heating_part_finished->getState() : false)
+    if (!is_heating_part_finished_crutch)
     {
         taskFreezing(0);
-        taskHeating(prog_heating_tempC);
+        //taskHeating(prog_heating_tempC);
+        /* heating proc begin - cratch */
+        taskToggleMixer(true);
+
+        if (!is_water_in_jacket)
+            io_water_jacket_r.write(true);
+        else
+        {
+            io_water_jacket_r.write(false);
+            if (liquid_tempC <= prog_heating_tempC)
+            {
+                if (is_heaters_starters_state)
+                    io_heater_r.write(true);
+            }
+            else
+            {
+                if (!is_heaters_starters_state)
+                    io_heater_r.write(false);
+            }
+        }
+        /* heating proc end */
+        
         if (liquid_tempC >= prog_heating_tempC)
         {
             prog_heating_part_finished->setValue(1);
+            is_heating_part_finished_crutch = true;
             prog_state->setValue(static_cast<uint8_t>(PROG_STATE::HeatingFinished));
         }
-        return true;
+        else
+            return true;
     }
 
     taskFinishProg(FINISH_FLAG::Success);

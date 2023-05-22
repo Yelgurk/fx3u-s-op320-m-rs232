@@ -59,7 +59,7 @@ private:
          is_flowing_uncalled = false,
          is_stop_btn_pressed = false,
          is_connected_380V = false,
-         is_heaters_starters_available = false,
+         is_heaters_starters_state = false,
          is_mixer_error = false;
     int16_t liquid_tempC = 0;
     uint8_t batt_chargeV = 0;
@@ -67,7 +67,10 @@ private:
     uint8_t sensor_call_index = 0;
 
     /* tasks var */
-    bool is_task_freezing_running = false,
+    bool is_pasteur_part_finished_crutch = false,
+         is_heating_part_finished_crutch = false,
+         is_freezing_part_finished_crutch = false,
+         is_task_freezing_running = false,
          is_task_heating_running = false,
          is_task_flowing_running = false,
          is_task_heating_extra = false,
