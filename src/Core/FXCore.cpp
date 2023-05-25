@@ -515,7 +515,7 @@ void FXCore::taskTryToggleFreezing(bool turn_on)
             }
         }
         
-        if (!prog_running->getState() && !is_connected_380V && turn_on) 
+        if (!prog_running->getState() && (!is_connected_380V || sensor_tempC_error)) 
         {
             is_task_freezing_running = false;
             io_heater_r.write(false);
@@ -558,7 +558,7 @@ void FXCore::taskTryToggleHeating(bool turn_on)
             }
         }
         
-        if (!prog_running->getState() && !is_connected_380V && turn_on) 
+        if (!prog_running->getState() && (!is_connected_380V || sensor_tempC_error)) 
         {
             is_task_heating_running = false;
             io_heater_r.write(false);
@@ -703,9 +703,9 @@ void FXCore::taskFinishProg(FINISH_FLAG flag)
         is_heating_part_finished_crutch = false;
         is_freezing_part_finished_crutch = false;
         
-        taskToggleMixer(false);
-        taskTryToggleFreezing(false);
         taskTryToggleHeating(false);
+        taskTryToggleFreezing(false);
+        taskToggleMixer(false);
         
         rtc_prog_finished->clone(rtc_general_current);
 
@@ -1104,6 +1104,12 @@ void FXCore::threadMain()
 
     if (is_task_freezing_running)
         taskFreezing(solo_freezing_tempC->getValue());
+
+    if (!is_task_heating_running &&
+        !is_task_heating_extra &&
+        !is_task_freezing_running &&
+        !prog_running->getState())
+        taskToggleMixer(false);
 
     if (is_task_flowing_running)
         taskFinishFlowing(false);
