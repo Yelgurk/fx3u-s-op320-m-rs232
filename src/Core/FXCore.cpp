@@ -1083,8 +1083,6 @@ void FXCore::threadMain()
             flow_error_displayed_yet = true;
             if (is_connected_380V)
                 info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vIn));
-            else if (prog_running->getState())
-                info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::PasteurAlready));
             scr_set_op320->setValue(SCR_ERROR_NOTIFY);
         }
     }
