@@ -1242,7 +1242,7 @@ void FXCore::hardReset()
     master_water_saving_toggle->setValue(0);
     master_hysteresis_toggle->setValue(1);
     master_hysteresis_tempC->setValue(1);
-    master_calibr_side_toggle->setValue(0);
+    master_calibr_side_toggle->setValue(1);
     master_pump_LM_performance->setValue(38);
     master_4ma_negative_limit->setValue(50);
     master_20ma_positive_limit->setValue(150);
