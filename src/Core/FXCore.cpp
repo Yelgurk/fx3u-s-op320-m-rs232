@@ -15,9 +15,21 @@ bool FXCore::checkIsProgWasRunned()
         uint8_t state_index = prog_state->getValue();
         if (state_index >= static_cast<uint8_t>(PROG_STATE::PasteurFinished))
             is_pasteur_part_finished_crutch = true;
-        if (state_index >= static_cast<uint8_t>(PROG_STATE::FreezingFinished))
+
+        if (prog_need_in_freezing->getState())
+        {
+            if (state_index >= static_cast<uint8_t>(PROG_STATE::FreezingFinished))
+                is_freezing_part_finished_crutch = true;
+        }
+        else
             is_freezing_part_finished_crutch = true;
-        if (state_index >= static_cast<uint8_t>(PROG_STATE::HeatingFinished))
+
+        if (prog_need_in_heating->getState())
+        {
+            if (state_index >= static_cast<uint8_t>(PROG_STATE::HeatingFinished))
+                is_heating_part_finished_crutch = true;
+        }
+        else
             is_heating_part_finished_crutch = true;
 
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
