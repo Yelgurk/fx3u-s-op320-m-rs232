@@ -807,7 +807,7 @@ bool FXCore::taskHeating(uint8_t expected_tempC)
         else
         {
             io_water_jacket_r.write(false);
-            if (liquid_tempC <= expected_tempC)
+            if (liquid_tempC < expected_tempC)
             {
                 if (is_heaters_starters_state)
                     io_heater_r.write(true);
@@ -964,7 +964,7 @@ bool FXCore::threadProg()
         else
         {
             io_water_jacket_r.write(false);
-            if (liquid_tempC <= prog_pasteur_tempC)
+            if (liquid_tempC < prog_pasteur_tempC)
             {
                 if (is_heaters_starters_state)
                     io_heater_r.write(true);
@@ -1033,7 +1033,7 @@ bool FXCore::threadProg()
         else
         {
             io_water_jacket_r.write(false);
-            if (liquid_tempC <= prog_heating_tempC)
+            if (liquid_tempC < prog_heating_tempC)
             {
                 if (is_heaters_starters_state)
                     io_heater_r.write(true);
@@ -1241,7 +1241,8 @@ void FXCore::hardReset()
     self_prog_mode->setValue(1);
     master_water_saving_toggle->setValue(0);
     master_hysteresis_toggle->setValue(1);
-    master_hysteresis_tempC->setValue(2);
+    master_hysteresis_tempC->setValue(1);
+    master_calibr_side_toggle->setValue(0);
     master_pump_LM_performance->setValue(38);
     master_4ma_negative_limit->setValue(50);
     master_20ma_positive_limit->setValue(150);
