@@ -15,7 +15,10 @@
 
 #ifndef FXCore_hpp
 #define FXCore_hpp
- 
+
+#define TEST_LOCAL 0
+#define TEST_TEMPC_MAX 70
+
 #define SCR_HELLO_PAGE 1
 #define SCR_MASTER_PAGE 2
 #define SCR_MASTER_PAGE_TIME 3
@@ -42,7 +45,7 @@ enum class MACHINE_TYPE  : uint8_t { DMP_flow, DM_flow, DMP, PM, HM, COUNT };
 enum class MACHINE_STATE : uint8_t { Await, Flowing, Heating, Freezing, Pasteurizing, COUNT };
 enum class FINISH_FLAG   : uint8_t { Success, UserCall, MixerError, Power380vError, WaterJacketError, COUNT };
 enum class PROG_STATE    : uint8_t { PasteurRunning, PasteurPaused, PasteurFinished, FreezingFinished, HeatingFinished, CycleFinished, COUNT };
-enum class OP320_PROCESS : uint8_t { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, COUNT };
+enum class OP320_PROCESS : uint8_t { Await, Washing, Heating, Freezing, Chargering, PasteurSelf, PasteurP1, PasteurP2, PasteurP3, AutoHeating, COUNT };
 enum class OP320_STEP    : uint8_t { Await, PasteurFinish, WaterJacket, PasteurHeating, PasteurProc, FreezingTo, HeatingTo, WaterJCirculation, ErrSolveAwait, COUNT };
 enum class OP320_ERROR   : uint8_t { Power380vOut, Mixer, Power380vIn, PowerMoreHour, WaterMoreHour, WaterAwait, SlowHeating, PasteurAlready, TempCSensorError, COUNT };
 
@@ -161,7 +164,7 @@ public:
     void flowgunOff();
     bool taskHeating(uint8_t expected_tempC);
     bool taskFreezing(uint8_t expected_tempC);
-    void checkAutoStartup(bool force_off = false);
+    bool checkAutoStartup(bool force_off = false);
     bool threadProg();
     void threadMain();
     void readSensors();

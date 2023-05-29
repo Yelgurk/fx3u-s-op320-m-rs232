@@ -123,7 +123,11 @@ void FXCore::setActivityPoint()
 
 void FXCore::callTempCSensor()
 {
-    double response = (double)io_liquid_temp_s.readAnalog();
+    #if TEST_LOCAL == 0
+        double response = (double)io_liquid_temp_s.readAnalog();
+    #else
+        double response = SENSOR_TEMPC_MINVAL + 10;
+    #endif
 
     if (response < SENSOR_TEMPC_MINVAL || response > SENSOR_TEMPC_MAXVAL)
         sensor_tempC_error = true;
@@ -140,6 +144,10 @@ void FXCore::callTempCSensor()
             sensor_call_tempC[sensor_call_index] = 0;
 
         ++sensor_call_index;
+
+        #if TEST_LOCAL == 1
+            liquid_tempC = (int16_t)(TEST_TEMPC_MAX - (((TEST_TEMPC_MAX / 3 * 2) / SENSOR_TEMPC_CALL_CNT) * (SENSOR_TEMPC_CALL_CNT - sensor_call_index - 1)));
+        #endif 
     }
    
     if (sensor_call_index >= SENSOR_TEMPC_CALL_CNT)    
@@ -149,7 +157,9 @@ void FXCore::callTempCSensor()
         for (uint8_t index = 0; index < SENSOR_TEMPC_CALL_CNT; index++)
             sum += sensor_call_tempC[index];
 
-        liquid_tempC = (int16_t)(sum / SENSOR_TEMPC_CALL_CNT);
+        #if TEST_LOCAL == 0
+            liquid_tempC = (int16_t)(sum / SENSOR_TEMPC_CALL_CNT);
+        #endif
     }
 }
 
@@ -349,7 +359,7 @@ void FXCore::init()
     mb_comm_blow_vInc.addTrigger([this]()->             void { flowgun_presets.incValue(); });
     mb_comm_blow_vDec.addTrigger([this]()->             void { flowgun_presets.decValue(); });
     mb_comm_blow_prescaler.addTrigger([this]()->        void { flowgun_presets.changeScaler(); });
-    mb_comm_solo_tempC_cancel.addTrigger([this]()->     void { solo_heating_tempC->refreshValue(); solo_freezing_tempC->refreshValue(); });
+    mb_comm_solo_tempC_cancel.addTrigger([this]()->     void { solo_heating_tempC->refreshValue(); solo_freezing_tempC->refreshValue(); gotoMainScreen(); });
     mb_comm_solo_tempC_accept.addTrigger([this]()->     void { solo_heating_tempC->setValueByModbus(); solo_freezing_tempC->setValueByModbus(); });
     mb_comm_rtc_new_cancel.addTrigger([this]()->        void { rtc_general_set_new->setZeroDateTime(); scr_set_op320->setValue(SCR_USER_MENU); });
     mb_comm_rtc_new_accept.addTrigger([this]()->        void { FXCore::setNewDateTime(); });
@@ -524,11 +534,14 @@ void FXCore::taskTryToggleFreezing(bool turn_on)
             io_water_jacket_r.write(false);
             taskToggleMixer(false);
 
-            if (!sensor_tempC_error)
-                info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
-            else
-                info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::TempCSensorError));
-            scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+            if (turn_on)
+            {
+                if (!sensor_tempC_error)
+                    info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
+                else
+                    info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::TempCSensorError));
+                scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+            }
         }
         
     }
@@ -567,11 +580,14 @@ void FXCore::taskTryToggleHeating(bool turn_on)
             io_water_jacket_r.write(false);
             taskToggleMixer(false);
 
-            if (!sensor_tempC_error)
-                info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
-            else
-                info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::TempCSensorError));
-            scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+            if (turn_on)
+            {
+                if (!sensor_tempC_error)
+                    info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
+                else
+                    info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::TempCSensorError));
+                scr_set_op320->setValue(SCR_ERROR_NOTIFY);
+            }
         }
     }
 }
@@ -590,11 +606,11 @@ bool FXCore::taskStartProg(uint8_t pasteur_preset)
         machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::DMP_flow) ||
         machine_type->getValue() == static_cast<uint8_t>(MACHINE_TYPE::PM))
     {
-        if (!is_connected_380V)
+        if (!is_connected_380V || sensor_tempC_error)
         {
             if (!start_error_displayed_yet || pasteur_preset == 0)
             {
-                info_error_notify->setValue(static_cast<uint8_t>(OP320_ERROR::Power380vOut));
+                info_error_notify->setValue(static_cast<uint8_t>(!is_connected_380V ? OP320_ERROR::Power380vOut : OP320_ERROR::TempCSensorError));
                 scr_set_op320->setValue(SCR_ERROR_NOTIFY);
             }
             start_error_displayed_yet = true;
@@ -867,30 +883,42 @@ bool FXCore::taskFreezing(uint8_t expected_tempC)
     return true;
 }
 
-void FXCore::checkAutoStartup(bool force_off)
+bool FXCore::checkAutoStartup(bool force_off)
 {
     uint8_t preset_id = 0;
     bool in_range = false;
     if (auto_prog_presets.isTimeToRunPreset(preset_id, *rtc_general_current, in_range))
     {
-        if (in_range && !force_off && !prog_state->getState())
+        if (in_range && !force_off && !prog_running->getState())
+        {
             taskStartProg(preset_id);
+            return true;
+        }
         else
+        {
             auto_prog_presets.markPresetAsCompleted(preset_id - 1);
+            return false;
+        }
     }
 
     preset_id = 0;
     in_range = false;
     if (auto_prog_presets.isTimeToRunExtra(preset_id, *rtc_general_current, in_range))
     {
-        if (in_range && !force_off && !prog_state->getState() && !is_task_heating_running && !is_task_freezing_running && !is_task_heating_extra)
+        if (in_range && !force_off && !prog_running->getState() && !is_task_heating_running && !is_task_freezing_running && !is_task_heating_extra)
         {
             is_task_heating_extra = true;
             extra_heating_tempC = auto_prog_presets.startExtraHeat(preset_id - 1);
+            return true;
         }
         else
+        {
             auto_prog_presets.markExtraAsCompleted(preset_id - 1);
+            return false;
+        }
     }
+
+    return false;
 }
 
 bool FXCore::threadProg()
@@ -1022,8 +1050,11 @@ bool FXCore::threadProg()
 
     taskFinishProg(FINISH_FLAG::Success);
 
-    is_task_heating_extra = true;
-    extra_heating_tempC = prog_heating_tempC;
+    if (prog_need_in_heating->getState())
+    {
+        is_task_heating_extra = true;
+        extra_heating_tempC = prog_heating_tempC;
+    }
 
     return true;
 }
@@ -1099,7 +1130,6 @@ void FXCore::threadMain()
 
 void FXCore::readSensors()
 {
-    is_stop_btn_pressed = is_stop_btn_pressed ? true : io_stop_btn_s.readDigital();
     is_flowing_call = io_blowgun_s.readDigital();//is_flowing_call ? true : io_blowgun_s.readDigital();
     if (is_flowing_uncalled && !is_flowing_call)
         is_flowing_uncalled = false;
@@ -1109,15 +1139,26 @@ void FXCore::readSensors()
         (response >= SENSOR_CHARGE_MAXVAL ? 100 :
         ((SENSOR_CHARGE_RANGE - (SENSOR_CHARGE_MAXVAL - (double)response)) / (SENSOR_CHARGE_RANGE / 100)));
     
-    is_connected_380V = io_v380_s.readDigital();
-    is_mixer_error = io_mixer_crash_s.readDigital();
+    #if TEST_LOCAL == 0
+        is_stop_btn_pressed = is_stop_btn_pressed ? true : io_stop_btn_s.readDigital();
+        is_connected_380V = io_v380_s.readDigital();
+        is_mixer_error = io_mixer_crash_s.readDigital();
+    #else
+        is_stop_btn_pressed = false;
+        is_connected_380V = true;
+        is_mixer_error = false;
+    #endif
 
     /* readed by readWaterInJacket() in new task every 5 sec
     is_water_in_jacket = io_water_jacket_s.readDigital();*/
 }
 
 void FXCore::readWaterInJacket() {
-    is_water_in_jacket = io_water_jacket_s.readDigital();
+    #if TEST_LOCAL == 0
+        is_water_in_jacket = io_water_jacket_s.readDigital();
+    #else
+        is_water_in_jacket = true;
+    #endif
 }
 
 void FXCore::displayOP320States()
@@ -1144,10 +1185,12 @@ void FXCore::displayOP320States()
     } break;
 
     case MACHINE_STATE::Heating: {
-        info_main_process->setValue(static_cast<uint8_t>(OP320_PROCESS::Heating));
+        info_main_process->setValue(static_cast<uint8_t>(is_task_heating_running ? OP320_PROCESS::Heating : OP320_PROCESS::AutoHeating));
         info_main_step_show_hide->setValue(1);
         if (!is_water_in_jacket)
             info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::WaterJacket));
+        else if (is_task_heating_running ? liquid_tempC < solo_heating_tempC->getValue() : liquid_tempC < extra_heating_tempC)
+            info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::PasteurHeating));
         else
             info_main_step->setValue(static_cast<uint8_t>(OP320_STEP::HeatingTo));
     } break;
@@ -1202,7 +1245,7 @@ void FXCore::hardReset()
     rtc_general_last_time_point->clone(rtc_general_current);
     machine_type->setValue(static_cast<uint8_t>(MACHINE_TYPE::DMP_flow));
     solo_heating_tempC->setValue(45);
-    solo_freezing_tempC->setValue(15);
+    solo_freezing_tempC->setValue(40);
     calibration_flowgun_dope_dose->setValue(0);
     self_prog_pasteur_tempC->setValue(65);
     self_prog_heating_tempC->setValue(45);
