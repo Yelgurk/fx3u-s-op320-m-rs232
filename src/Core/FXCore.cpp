@@ -15,9 +15,21 @@ bool FXCore::checkIsProgWasRunned()
         uint8_t state_index = prog_state->getValue();
         if (state_index >= static_cast<uint8_t>(PROG_STATE::PasteurFinished))
             is_pasteur_part_finished_crutch = true;
-        if (state_index >= static_cast<uint8_t>(PROG_STATE::FreezingFinished))
+
+        if (prog_need_in_freezing->getState())
+        {
+            if (state_index >= static_cast<uint8_t>(PROG_STATE::FreezingFinished))
+                is_freezing_part_finished_crutch = true;
+        }
+        else
             is_freezing_part_finished_crutch = true;
-        if (state_index >= static_cast<uint8_t>(PROG_STATE::HeatingFinished))
+
+        if (prog_need_in_heating->getState())
+        {
+            if (state_index >= static_cast<uint8_t>(PROG_STATE::HeatingFinished))
+                is_heating_part_finished_crutch = true;
+        }
+        else
             is_heating_part_finished_crutch = true;
 
         if (prog_state->getValue() == static_cast<uint8_t>(PROG_STATE::PasteurPaused))
@@ -785,7 +797,7 @@ bool FXCore::taskHeating(uint8_t expected_tempC)
         else
         {
             io_water_jacket_r.write(false);
-
+          
             if (liquid_tempC + (master_hysteresis_toggle->getState() ? master_hysteresis_tempC->getValue() : 0) < expected_tempC)
             {
                 if (is_heaters_starters_state)
@@ -1199,7 +1211,8 @@ void FXCore::hardReset()
     self_prog_mode->setValue(1);
     master_water_saving_toggle->setValue(0);
     master_hysteresis_toggle->setValue(1);
-    master_hysteresis_tempC->setValue(2);
+    master_hysteresis_tempC->setValue(1);
+    master_calibr_side_toggle->setValue(1);
     master_pump_LM_performance->setValue(38);
     master_4ma_negative_limit->setValue(50);
     master_20ma_positive_limit->setValue(150);
