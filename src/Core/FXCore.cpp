@@ -408,12 +408,12 @@ void FXCore::init()
     mb_comm_self_pasteur_start.addTrigger([this]()->    void { taskStartProg(0); });
     mb_comm_solo_heating_toggle.addTrigger([this]()->   void { taskTryToggleHeating(!is_task_heating_running); });
     mb_comm_solo_freezing_toggle.addTrigger([this]()->  void { taskTryToggleFreezing(!is_task_freezing_running); });
-    //mb_comm_blowgun_run_btn.addTrigger([this]()->       void { is_flowing_call = true; });
+    mb_comm_blowgun_run_btn.addTrigger([this]()->       void { if (scr_get_op320->getValue() == SCR_BLOWING_PAGE) taskTryToggleFlowing(); }); // is_flowing_call = true; });
     mb_comm_goto_scr_master.addTrigger([this]()->       void { gotoMainScreen(); });
     mb_master_machine_type_up.addTrigger([this]()->     void { stopAllTasks(false); machine_type->incValue(); });
     mb_master_machine_type_down.addTrigger([this]()->   void { stopAllTasks(false); machine_type->decValue(); });
     mb_comm_auto_extra_heat_toggle.addTrigger([this]()->void { auto_prog_presets.toggleExtraH(); });
-    mb_master_calibr_toggle.addTrigger([this]()->       void { master_calibr_side_toggle->setValue(master_calibr_side_toggle->getValue() == 0 ? 1 : 0); });
+    mb_main_goto_menu.addTrigger([this]()->             void { if (!prog_running->getState()) scr_set_op320->setValue(SCR_USER_MENU); });
     delay(50);
 
     /* self check after startup / before giving contorl to plc (tasks) */

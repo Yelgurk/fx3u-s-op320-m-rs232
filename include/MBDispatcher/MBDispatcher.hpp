@@ -121,7 +121,7 @@ public:
            mb_master_machine_type_up = MBUnit(mb_au16data, 824, type::Coil),
            mb_master_machine_type_down = MBUnit(mb_au16data, 825, type::Coil),
            mb_comm_auto_extra_heat_toggle = MBUnit(mb_au16data, 826, type::Coil),
-           mb_master_calibr_toggle = MBUnit(mb_au16data, 827, type::Coil);
+           mb_main_goto_menu = MBUnit(mb_au16data, 827, type::Coil);
 
     void init();
     void poll();
